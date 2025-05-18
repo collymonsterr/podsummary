@@ -258,7 +258,7 @@ const Home = () => {
                   : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
-              {isLoading ? "⏳ Processing..." : "✨ Summarize"}
+              {isLoading ? "⏳ Processing..." : "✨ Get Summary"}
             </button>
           </div>
         </form>
