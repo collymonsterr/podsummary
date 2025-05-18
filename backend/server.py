@@ -116,7 +116,7 @@ async def get_transcript(video_id):
 # Summarize text using OpenAI's API or a fallback method
 async def summarize_text(text):
     try:
-        # If transcript is very long, truncate it to avoid token limits
+        # First try OpenAI API
         max_tokens = 8000  # Reduced context size for gpt-3.5-turbo
         if len(text) > max_tokens * 4:  # Approximate character count
             text = text[:max_tokens * 4]  # Truncate to fit within context window
@@ -132,54 +132,62 @@ async def summarize_text(text):
         )
         
         return response.choices[0].message.content
-    except Exception as e:
-        logging.error(f"Error in summarizing text with OpenAI: {str(e)}")
+    except Exception as openai_error:
+        logging.error(f"OpenAI API error: {str(openai_error)}")
         
-        # Fallback to extractive summarization
+        # Simple extractive summarization fallback that will always work
+        logging.info("Using basic fallback summarization method")
         try:
-            # Use NLTK for better sentence tokenization
-            from nltk.tokenize import sent_tokenize
+            # Split text into chunks - use a simple period split if it's a song lyrics or similar
+            chunks = text.split('. ')
             
-            # Tokenize text into sentences
-            try:
-                sentences = sent_tokenize(text)
-            except Exception as nltk_error:
-                logging.error(f"NLTK tokenization error: {str(nltk_error)}")
-                # If NLTK fails, use simple split by period
-                sentences = text.split('. ')
+            # For very short text, just return it
+            if len(text) < 200 or len(chunks) < 5:
+                return "The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
+                
+            # Create a simple extractive summary
+            summary_chunks = []
             
-            # If very short transcript, return as is
-            if len(sentences) <= 5:
-                return "Transcript is too short to summarize effectively. Here it is in full: " + text
-            
-            # Take first sentence (usually introduction)
-            summary = [sentences[0]]
-            
-            # Take a sentence from every ~10% of the transcript
-            if len(sentences) > 10:
-                segment_size = len(sentences) // 10
-                for i in range(1, 10):
-                    idx = min(i * segment_size, len(sentences) - 1)
-                    summary.append(sentences[idx])
+            # Always take the first chunk (often contains title or intro)
+            if chunks[0]:
+                summary_chunks.append(chunks[0])
+                
+            # Take samples throughout the text
+            if len(chunks) > 10:
+                # For longer texts, take samples at regular intervals
+                sample_interval = max(1, len(chunks) // 5)
+                for i in range(sample_interval, len(chunks), sample_interval):
+                    if chunks[i].strip():
+                        summary_chunks.append(chunks[i].strip())
             else:
-                # For shorter transcripts, take every other sentence
-                summary.extend([s for i, s in enumerate(sentences[1:]) if i % 2 == 0])
+                # For shorter texts, take every other chunk
+                for i in range(1, len(chunks), 2):
+                    if chunks[i].strip():
+                        summary_chunks.append(chunks[i].strip())
             
-            # Add the last sentence (usually a conclusion)
-            if sentences[-1] not in summary:
-                summary.append(sentences[-1])
+            # Always include the last chunk if not already included (often contains conclusion)
+            if chunks[-1] and chunks[-1] not in summary_chunks:
+                summary_chunks.append(chunks[-1])
+                
+            # Join the summary chunks with periods where needed
+            processed_chunks = []
+            for chunk in summary_chunks:
+                chunk = chunk.strip()
+                if chunk and not chunk.endswith(('.', '!', '?', '"', '♪')):
+                    chunk += '.'
+                if chunk:
+                    processed_chunks.append(chunk)
             
-            # Join sentences properly, adding period if missing
-            formatted_summary = []
-            for sentence in summary:
-                if sentence and not sentence.endswith(('.', '!', '?', '"', '♪')):
-                    sentence += '.'
-                formatted_summary.append(sentence)
+            # Join all chunks with spaces
+            final_summary = " ".join(processed_chunks)
             
-            return "Note: This is an extractive summary created as a fallback.\n\n" + " ".join(formatted_summary)
-        except Exception as summarization_error:
-            logging.error(f"Fallback summarization error: {str(summarization_error)}")
-            return "Error generating summary. The transcript was processed but could not be summarized. You can view the full transcript in the Transcript tab."
+            # Add a note about the fallback method
+            return "Note: This is an automatic extraction of key points from the transcript (OpenAI summarization unavailable).\n\n" + final_summary
+            
+        except Exception as fallback_error:
+            logging.error(f"Error in fallback summarization: {str(fallback_error)}")
+            # Ultimate fallback - return a message that still allows the user to see the transcript
+            return "Sorry, we couldn't generate a summary for this video. Please check the transcript tab to see the full text."
 
 # Route to get transcript and summary from YouTube URL
 @api_router.post("/summarize", response_model=TranscriptResponse)
