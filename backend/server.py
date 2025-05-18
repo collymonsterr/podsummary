@@ -519,6 +519,38 @@ async def update_video_metadata():
     
     return {"updated_videos": updated_count, "total_processed": len(videos_without_metadata)}
 
+# Get channel videos from YouTube
+@api_router.post("/channel-videos", response_model=dict)
+async def get_channel_videos(request: dict):
+    channel_url = request.get("channel_url")
+    if not channel_url:
+        raise HTTPException(status_code=400, detail="Channel URL is required")
+    
+    try:
+        # Use SearchAPI.io to get latest videos from channel
+        response = requests.get(
+            "https://www.searchapi.io/api/v1/search",
+            params={
+                "engine": "youtube",
+                "q": f"channel:{channel_url} videos",
+                "api_key": searchapi_key
+            }
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail=f"Failed to fetch channel videos: {response.text}")
+        
+        data = response.json()
+        videos = data.get("video_results", [])[:6]  # Get most recent 6
+        
+        return {
+            "channel_name": videos[0].get("channel", {}).get("name") if videos else "",
+            "videos": videos
+        }
+    except Exception as e:
+        logging.error(f"Error fetching channel videos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
