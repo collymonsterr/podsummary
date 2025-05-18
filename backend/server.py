@@ -104,28 +104,71 @@ async def get_transcript(video_id):
     full_transcript = " ".join([segment.get('text', '') for segment in data['transcripts']])
     return full_transcript
 
-# Summarize text using OpenAI's API
+# Summarize text using OpenAI's API or a fallback method
 async def summarize_text(text):
     try:
-        # If transcript is very long, truncate it to avoid token limits
-        max_tokens = 16000  # Maximum context for newer models
-        if len(text) > max_tokens * 4:  # Approximate character count
-            text = text[:max_tokens * 4]  # Truncate to fit within context window
+        # First try OpenAI API
+        try:
+            # If transcript is very long, truncate it to avoid token limits
+            max_tokens = 16000  # Maximum context for newer models
+            if len(text) > max_tokens * 4:  # Approximate character count
+                text = text[:max_tokens * 4]  # Truncate to fit within context window
+                
+            response = openai.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that summarizes YouTube video transcripts. Create a concise but comprehensive summary that captures the key points, main arguments, and important details from the transcript."},
+                    {"role": "user", "content": f"Please summarize this transcript: {text}"}
+                ],
+                temperature=0.5,
+                max_tokens=1000
+            )
             
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that summarizes YouTube video transcripts. Create a concise but comprehensive summary that captures the key points, main arguments, and important details from the transcript."},
-                {"role": "user", "content": f"Please summarize this transcript: {text}"}
-            ],
-            temperature=0.5,
-            max_tokens=1000
-        )
+            return response.choices[0].message.content
         
-        return response.choices[0].message.content
+        except Exception as e:
+            # If OpenAI fails (e.g., quota exceeded), use basic fallback summarization
+            logging.warning(f"OpenAI API error: {str(e)}. Using fallback summarization.")
+            
+            # Simple extractive summarization as fallback
+            # Split into sentences
+            from nltk.tokenize import sent_tokenize
+            
+            # Install nltk data if not already present
+            import nltk
+            try:
+                nltk.data.find('tokenizers/punkt')
+            except LookupError:
+                nltk.download('punkt')
+            
+            sentences = sent_tokenize(text)
+            
+            # If very short transcript, return as is
+            if len(sentences) <= 5:
+                return "Transcript is too short to summarize effectively. Here it is in full: " + text
+            
+            # Take first sentence (usually introduction)
+            summary = [sentences[0]]
+            
+            # Take a sentence from every ~10% of the transcript
+            if len(sentences) > 10:
+                segment_size = len(sentences) // 10
+                for i in range(1, 10):
+                    idx = min(i * segment_size, len(sentences) - 1)
+                    summary.append(sentences[idx])
+            else:
+                # For shorter transcripts, take every other sentence
+                summary.extend([s for i, s in enumerate(sentences[1:]) if i % 2 == 0])
+            
+            # Add the last sentence (usually a conclusion)
+            if sentences[-1] not in summary:
+                summary.append(sentences[-1])
+            
+            return "Note: This is an extractive summary created without AI due to API limits.\n\n" + " ".join(summary)
+    
     except Exception as e:
         logging.error(f"Error in summarizing text: {str(e)}")
-        return "Error generating summary. The transcript may be too long or the service is unavailable."
+        return "Error generating summary. The transcript may be too long or there was an unexpected error in processing."
 
 # Route to get transcript and summary from YouTube URL
 @api_router.post("/summarize", response_model=TranscriptResponse)
