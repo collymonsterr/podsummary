@@ -88,6 +88,42 @@ def extract_video_id(url):
             
     raise ValueError("Could not extract video ID from URL")
 
+# Extract YouTube video metadata using SearchAPI.io
+async def get_video_metadata(video_id):
+    url = "https://www.searchapi.io/api/v1/search"
+    params = {
+        "engine": "youtube",
+        "api_key": searchapi_key,
+        "q": f"https://www.youtube.com/watch?v={video_id}"
+    }
+    
+    try:
+        logging.info(f"Fetching metadata for video ID: {video_id}")
+        response = requests.get(url, params=params)
+        
+        if response.status_code != 200:
+            logging.error(f"Failed to get video metadata: {response.text}")
+            return None, None, None
+            
+        data = response.json()
+        
+        if 'video_results' not in data or not data['video_results']:
+            logging.error(f"No video results found for ID: {video_id}")
+            return None, None, None
+            
+        video = data['video_results'][0]
+        
+        title = video.get('title', '')
+        channel = video.get('channel', {}).get('name', '')
+        thumbnail_url = video.get('thumbnail', {}).get('static', '')
+        
+        logging.info(f"Retrieved metadata for '{title}' by {channel}")
+        return title, channel, thumbnail_url
+        
+    except Exception as e:
+        logging.error(f"Error fetching video metadata: {str(e)}")
+        return None, None, None
+
 # Get transcript using SearchAPI.io
 async def get_transcript(video_id):
     url = "https://www.searchapi.io/api/v1/search"
