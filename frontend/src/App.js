@@ -64,6 +64,8 @@ const Home = () => {
   const [adminKey, setAdminKey] = useState("");
   const [channelUrl, setChannelUrl] = useState("");
   const navigate = useNavigate();
+  const [channelUrl, setChannelUrl] = useState("");
+  const navigate = useNavigate();
   
   // Set document title on load
   useEffect(() => {
