@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import axios from "axios";
 import ChannelPage from "./ChannelPage";
 
@@ -49,7 +49,13 @@ const VideoCard = ({ video, onClick, onDelete, isAdmin }) => {
   );
 };
 
-const Home = () => {
+// Wrapper component that has access to useNavigate
+const HomeWithNavigation = () => {
+  const navigate = useNavigate();
+  return <Home navigate={navigate} />;
+};
+
+const Home = ({ navigate }) => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [transcript, setTranscript] = useState("");
   const [summary, setSummary] = useState("");
@@ -64,7 +70,6 @@ const Home = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminKey, setAdminKey] = useState("");
   const [channelUrl, setChannelUrl] = useState("");
-  const navigate = useNavigate();
   
   // Set document title on load
   useEffect(() => {
