@@ -63,6 +63,11 @@ const Home = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminKey, setAdminKey] = useState("");
   
+  // Set document title on load
+  useEffect(() => {
+    document.title = "Podbrief - Podcast Summaries";
+  }, []);
+
   // Check if admin key is in localStorage on load
   useEffect(() => {
     const storedAdminKey = localStorage.getItem("adminKey");
