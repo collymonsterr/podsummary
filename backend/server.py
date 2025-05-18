@@ -171,8 +171,7 @@ async def summarize_text(text):
                 return "The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
                 
             # Create a simple extractive summary with proper formatting to match requested style
-            summary = "# Summary of Video Transcript\n\n"
-            summary += "## Main Topics Discussed\n\n"
+            summary = "# Summary of Video Transcript\n\n## Main Topics Discussed\n\n"
             
             # Extract topics from chunks
             topics = []
