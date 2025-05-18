@@ -313,13 +313,57 @@ async def summarize_youtube_video(request: VideoRequest):
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
-        # Get transcript - either from cache or from YouTube API
-        transcript = ""
+        # Check if we already have this video's data in our database
         existing = await db.transcripts.find_one({"video_id": video_id})
         
+        title = None
+        channel = None 
+        thumbnail_url = None
+        transcript = ""
+        is_cached = False
+        
+        # If we have a complete cached result, return it immediately
+        if existing and "transcript" in existing and "summary" in existing:
+            logging.info(f"Found cached result for video ID: {video_id}")
+            title = existing.get("title")
+            channel = existing.get("channel")
+            thumbnail_url = existing.get("thumbnail_url")
+            
+            # If we have transcript and summary but no metadata, try to fetch it
+            if not title or not channel or not thumbnail_url:
+                try:
+                    title, channel, thumbnail_url = await get_video_metadata(video_id)
+                    
+                    # Update the existing record with metadata
+                    if title and channel:
+                        await db.transcripts.update_one(
+                            {"_id": existing["_id"]},
+                            {"$set": {
+                                "title": title,
+                                "channel": channel,
+                                "thumbnail_url": thumbnail_url
+                            }}
+                        )
+                except Exception as e:
+                    logging.error(f"Error updating metadata: {str(e)}")
+            
+            # Return cached result
+            return TranscriptResponse(
+                transcript=existing["transcript"],
+                summary=existing["summary"],
+                video_id=existing["video_id"],
+                url=existing["url"],
+                title=title,
+                channel=channel,
+                thumbnail_url=thumbnail_url,
+                is_cached=True
+            )
+        
+        # We need to get the transcript
         if existing and "transcript" in existing and existing["transcript"]:
-            # Use the cached transcript to avoid unnecessary API calls
+            # Use the cached transcript
             transcript = existing["transcript"]
+            is_cached = True
             logging.info(f"Using cached transcript for video ID: {video_id}")
         else:
             # Get transcript from YouTube
@@ -330,19 +374,36 @@ async def summarize_youtube_video(request: VideoRequest):
                 logging.error(f"Error getting transcript: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        # Always generate a new summary with the current prompt
+        # Fetch video metadata if we don't have it
+        if not title or not channel or not thumbnail_url:
+            try:
+                title, channel, thumbnail_url = await get_video_metadata(video_id)
+            except Exception as e:
+                logging.error(f"Error fetching metadata: {str(e)}")
+        
+        # Generate a summary
         summary = await summarize_text(transcript)
         logging.info(f"Generated new summary for video ID: {video_id}")
         
         # Store or update in database
         if existing:
-            # Update the existing record with the new summary
+            # Update the existing record with new data
+            update_data = {
+                "summary": summary,
+                "timestamp": datetime.utcnow()
+            }
+            
+            # Add metadata if available
+            if title:
+                update_data["title"] = title
+            if channel:
+                update_data["channel"] = channel
+            if thumbnail_url:
+                update_data["thumbnail_url"] = thumbnail_url
+            
             await db.transcripts.update_one(
                 {"_id": existing["_id"]},
-                {"$set": {
-                    "summary": summary,
-                    "timestamp": datetime.utcnow()
-                }}
+                {"$set": update_data}
             )
         else:
             # Create a new record
@@ -350,7 +411,10 @@ async def summarize_youtube_video(request: VideoRequest):
                 video_id=video_id,
                 url=request.youtube_url,
                 transcript=transcript,
-                summary=summary
+                summary=summary,
+                title=title,
+                channel=channel,
+                thumbnail_url=thumbnail_url
             )
             await db.transcripts.insert_one(transcript_obj.dict())
         
@@ -358,7 +422,11 @@ async def summarize_youtube_video(request: VideoRequest):
             transcript=transcript,
             summary=summary,
             video_id=video_id,
-            url=request.youtube_url
+            url=request.youtube_url,
+            title=title,
+            channel=channel,
+            thumbnail_url=thumbnail_url,
+            is_cached=is_cached
         )
             
     except HTTPException:
