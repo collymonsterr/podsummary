@@ -145,7 +145,7 @@ class YouTubeSummarizerTester:
                 
                 if missing_fields:
                     print(f"❌ History item missing required fields: {', '.join(missing_fields)}")
-                    return False
+                    return False, response
                     
                 # Check for metadata fields
                 metadata_fields = ['title', 'channel', 'thumbnail_url']
@@ -154,12 +154,12 @@ class YouTubeSummarizerTester:
                 if not has_metadata:
                     print("⚠️ History item missing some metadata fields")
                 
-                return True
+                return True, response
             else:
                 print("⚠️ History is empty, cannot fully validate")
-                return True
+                return True, response
         
-        return False
+        return False, []
 
     def test_delete_transcript_with_valid_admin_key(self, transcript_id):
         """Test deleting a transcript with valid admin key"""
