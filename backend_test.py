@@ -12,10 +12,9 @@ class YouTubeSummarizerTester:
         self.tests_run = 0
         self.tests_passed = 0
         self.test_videos = [
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Music video
-            "https://www.youtube.com/watch?v=_vS_b7cJn2A",  # TED Talk
-            "https://www.youtube.com/watch?v=THNPmhBl-8I",  # Comedy sketch
-            "https://www.youtube.com/watch?v=8S0FDjFBj8o"   # Educational
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Rick Astley - Never Gonna Give You Up
+            "https://www.youtube.com/watch?v=jNQXAC9IVRw",  # Me at the zoo - first YouTube video
+            "https://www.youtube.com/watch?v=_vS_b7cJn2A"    # TED Talk
         ]
 
     def run_test(self, name, method, endpoint, expected_status, data=None):
