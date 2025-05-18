@@ -73,7 +73,7 @@ class YouTubeSummarizerTester:
             "POST",
             "summarize",
             400,
-            data={"url": self.invalid_video_url}
+            data={"youtube_url": self.invalid_video_url}
         )
 
     def test_valid_youtube_url(self):
@@ -85,7 +85,7 @@ class YouTubeSummarizerTester:
             "POST",
             "summarize",
             200,
-            data={"url": self.test_video_url}
+            data={"youtube_url": self.test_video_url}
         )
         
         if success:
@@ -153,8 +153,7 @@ class YouTubeSummarizerTester:
         
         if success:
             try:
-                data = response.json()
-                history_items = data.get('history', [])
+                history_items = response.json()
                 
                 logger.info(f"📚 History items: {len(history_items)}")
                 
