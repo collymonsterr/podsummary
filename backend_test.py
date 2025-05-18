@@ -18,10 +18,11 @@ class YouTubeSummarizerTester:
             "https://www.youtube.com/watch?v=_vS_b7cJn2A"    # TED Talk
         ]
 
-    def run_test(self, name, method, endpoint, expected_status, data=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
-        headers = {'Content-Type': 'application/json'}
+        if not headers:
+            headers = {'Content-Type': 'application/json'}
         
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
@@ -31,6 +32,8 @@ class YouTubeSummarizerTester:
                 response = requests.get(url, headers=headers)
             elif method == 'POST':
                 response = requests.post(url, json=data, headers=headers)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers)
 
             success = response.status_code == expected_status
             if success:
