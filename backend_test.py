@@ -9,6 +9,7 @@ class YouTubeSummarizerTester:
     def __init__(self, base_url="https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
+        self.admin_key = "yt-summarizer-admin-2025"
         self.tests_run = 0
         self.tests_passed = 0
         self.test_videos = [
