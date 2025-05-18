@@ -404,7 +404,7 @@ const Home = () => {
       {/* Recent Videos Section */}
       {recentVideos.length > 0 && (
         <div className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">🎞️ Recently Summarized Videos</h2>
+          <h2 className="text-xl font-semibold mb-4">🎧 Recently Summarized Podcasts</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
             {recentVideos.map((video) => (
               <VideoCard 
