@@ -143,8 +143,8 @@ async def summarize_text(text):
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",  # Most cost-effective model
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that creates clear, concise summaries of YouTube video transcripts."},
-                {"role": "user", "content": f"Summarise this video transcript clearly and concisely. List the main topics discussed in the order they appear, and highlight the most interesting or surprising insights. Write it so someone can quickly decide if it's worth watching the full video.\n\nTranscript:\n{text}"}
+                {"role": "system", "content": "You are a helpful assistant that creates clear, concise summaries of YouTube video transcripts. Use appropriate emojis to make your summaries more engaging and visually appealing."},
+                {"role": "user", "content": f"Summarise this video transcript clearly and concisely. List the main topics discussed in the order they appear, and highlight the most interesting or surprising insights. Use appropriate emojis before each main point and insight to make the summary more engaging. Write it so someone can quickly decide if it's worth watching the full video.\n\nTranscript:\n{text}"}
             ],
             temperature=0.5,
             max_tokens=500  # Reduced from 1000 to save on tokens
@@ -158,7 +158,7 @@ async def summarize_text(text):
         
         # Special handling for song lyrics
         if "♪" in text:
-            return "This appears to be a song with lyrics. Here are the main lyrics:\n\n" + summarize_song_lyrics(text)
+            return "🎵 This appears to be a song with lyrics. Here are the main lyrics: 🎵\n\n" + summarize_song_lyrics(text)
         
         # Simple extractive summarization fallback that will always work
         logging.info("Using basic fallback summarization method")
@@ -168,17 +168,20 @@ async def summarize_text(text):
             
             # For very short text, just return it
             if len(text) < 500 or len(chunks) < 5:
-                return "The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
+                return "📝 The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
                 
             # Create a simple extractive summary with proper formatting to match requested style
-            summary = "# Summary of Video Transcript\n\n## Main Topics Discussed\n\n"
+            summary = "# 📋 Summary of Video Transcript\n\n## 🔍 Main Topics Discussed\n\n"
+            
+            # Emojis for different topics
+            topic_emojis = ["🔸", "🔹", "💡", "📌", "🔆", "✨", "📣", "🔍", "📈", "🌟"]
             
             # Extract topics from chunks
             topics = []
             
             # Always take the first chunk (often contains title or intro)
             if chunks[0]:
-                topics.append("1. Introduction: " + chunks[0].strip())
+                topics.append(f"1. {topic_emojis[0]} Introduction: " + chunks[0].strip())
                 
             # Take samples throughout the text for main points
             if len(chunks) > 10:
@@ -187,37 +190,39 @@ async def summarize_text(text):
                 for i in range(1, 5):  # Get about 4-5 main points
                     idx = min(i * sample_interval, len(chunks) - 1)
                     if chunks[idx].strip():
-                        topics.append(f"{i+1}. {chunks[idx].strip()}")
+                        emoji_idx = min(i, len(topic_emojis) - 1)
+                        topics.append(f"{i+1}. {topic_emojis[emoji_idx]} {chunks[idx].strip()}")
             else:
                 # For shorter texts, take every other chunk
                 for i in range(1, min(5, len(chunks))):
                     if chunks[i].strip():
-                        topics.append(f"{i+1}. {chunks[i].strip()}")
+                        emoji_idx = min(i, len(topic_emojis) - 1)
+                        topics.append(f"{i+1}. {topic_emojis[emoji_idx]} {chunks[i].strip()}")
             
             # Add the topics to the summary
             summary += "\n".join(topics)
             
             # Add insights section
-            summary += "\n\n## Key Insights\n\n"
+            summary += "\n\n## 💎 Key Insights\n\n"
             
             # Take last chunk as conclusion or insight if available
             if chunks[-1] and chunks[-1] not in topics:
-                summary += "* " + chunks[-1].strip() + "\n"
+                summary += "* 🔑 " + chunks[-1].strip() + "\n"
             
             # Add a sample from middle of video as another insight
             mid_idx = len(chunks) // 2
             if chunks[mid_idx] and chunks[mid_idx] not in topics:
-                summary += "* " + chunks[mid_idx].strip() + "\n"
+                summary += "* 💫 " + chunks[mid_idx].strip() + "\n"
             
             # Add disclaimer about the fallback method
-            summary += "\n\n*Note: This is an automatic summary created without AI due to API limits. For best results, try again later.*"
+            summary += "\n\n*⚠️ Note: This is an automatic summary created without AI due to API limits. For best results, try again later.*"
             
             return summary
             
         except Exception as fallback_error:
             logging.error(f"Error in fallback summarization: {str(fallback_error)}")
             # Ultimate fallback - return a message that still allows the user to see the transcript
-            return "Sorry, we couldn't generate a summary for this video. Please check the transcript tab to see the full text."
+            return "❗ Sorry, we couldn't generate a summary for this video. Please check the transcript tab to see the full text."
 
 def summarize_song_lyrics(text):
     """Special function to summarize song lyrics"""
