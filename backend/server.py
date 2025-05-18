@@ -56,6 +56,10 @@ class TranscriptResponse(BaseModel):
     summary: str
     video_id: str
     url: str
+    title: Optional[str] = None
+    channel: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    is_cached: bool = False
 
 class StoredTranscript(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -63,6 +67,9 @@ class StoredTranscript(BaseModel):
     url: str
     transcript: str
     summary: str
+    title: Optional[str] = None
+    channel: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 # Extract YouTube video ID from various YouTube URL formats
