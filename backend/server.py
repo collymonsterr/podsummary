@@ -527,7 +527,7 @@ async def get_channel_videos(request: dict):
         raise HTTPException(status_code=400, detail="Channel URL is required")
     
     try:
-        # Extract channel ID/handle
+        # Extract channel ID/handle for better search
         channel_id = None
         channel_handle = None
         
@@ -545,179 +545,101 @@ async def get_channel_videos(request: dict):
             # Format: youtube.com/user/username
             channel_name = channel_url.split('/user/')[-1].split('/')[0].split('?')[0]
             channel_handle = channel_name
-        elif 'youtube.com/' in channel_url:
-            # Try to extract from a video URL
-            try:
-                # Try to get video ID
-                video_id = extract_video_id(channel_url)
-                
-                # Use video oEmbed to get channel information
-                oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
-                response = requests.get(oembed_url)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    author = data.get('author_name', '')
-                    channel_handle = author.replace(' ', '')  # Simple conversion of name to handle
-            except:
-                pass
-                
-        # Use real web scraping as a fallback to get videos
-        logging.info(f"Using web scraping to get videos for channel: {channel_handle or channel_id or channel_url}")
-            
-        # Function to scrape YouTube channel videos (simplified)
-        def scrape_youtube_channel_videos(channel_url):
-            try:
-                # Make sure URL ends with /videos
-                if not channel_url.endswith('/videos'):
-                    if channel_url.endswith('/'):
-                        channel_url += 'videos'
-                    else:
-                        channel_url += '/videos'
-                
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                }
-                
-                # Try to extract from channel URL
-                response = requests.get(channel_url, headers=headers)
-                
-                if response.status_code != 200:
-                    return None, []
-                
-                channel_name = "YouTube Channel"
-                videos = []
-                
-                html = response.text
-                
-                # Very basic extraction using regex - note this is simplified
-                # Extract channel name
-                channel_title_match = re.search(r'<meta property="og:title" content="([^"]+)"', html)
-                if channel_title_match:
-                    channel_name = channel_title_match.group(1).replace(" - YouTube", "")
-                
-                # Extract video IDs, titles
-                video_data = []
-                
-                # First try to find video IDs from watch links
-                video_ids = re.findall(r'href="/watch\?v=([a-zA-Z0-9_-]{11})"', html)
-                
-                # Get unique IDs
-                video_ids = list(dict.fromkeys(video_ids))
-                
-                # Use the first 6 video IDs
-                for i, video_id in enumerate(video_ids[:6]):
-                    try:
-                        # Use YouTube's oEmbed API to get video metadata
-                        oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
-                        oembed_response = requests.get(oembed_url)
-                        
-                        if oembed_response.status_code == 200:
-                            video_data = oembed_response.json()
-                            title = video_data.get('title', f'Video {video_id}')
-                            author = video_data.get('author_name', channel_name)
-                            
-                            video = {
-                                "id": video_id,
-                                "title": title,
-                                "link": f"https://www.youtube.com/watch?v={video_id}",
-                                "channel": {"name": author},
-                                "thumbnail": {"static": f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"}
-                            }
-                            videos.append(video)
-                    except Exception as e:
-                        logging.error(f"Error getting video data for ID {video_id}: {str(e)}")
-                
-                return channel_name, videos
-                
-            except Exception as e:
-                logging.error(f"Error scraping YouTube channel: {str(e)}")
-                return None, []
         
-        # Try to determine the correct URL format for scraping
-        scrape_url = channel_url
+        # Create the search query based on the channel information
+        search_query = channel_url
         if channel_handle:
-            scrape_url = f"https://www.youtube.com/@{channel_handle}"
+            search_query = f"@{channel_handle}"
         elif channel_id:
-            scrape_url = f"https://www.youtube.com/channel/{channel_id}"
+            search_query = f"channel:{channel_id}"
         
-        channel_name, videos = scrape_youtube_channel_videos(scrape_url)
+        logging.info(f"Using SearchAPI.io to fetch videos for: {search_query}")
         
-        # If we failed to get videos or the channel name, try a different URL format
-        if not videos:
-            # Try other URL formats
-            if channel_handle:
-                alt_url = f"https://www.youtube.com/c/{channel_handle}"
-                channel_name, videos = scrape_youtube_channel_videos(alt_url)
+        # Use SearchAPI.io to find the channel and its videos
+        response = requests.get(
+            "https://www.searchapi.io/api/v1/search",
+            params={
+                "engine": "youtube",
+                "q": search_query,
+                "api_key": searchapi_key,
+                "num": 10  # Request more than we need
+            }
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, 
+                                detail=f"SearchAPI.io error: {response.text}")
+        
+        data = response.json()
+        
+        # Check if we found channel results
+        if "channel_results" in data and data["channel_results"]:
+            channel_info = data["channel_results"][0]
+            channel_name = channel_info.get("name", "YouTube Channel")
+            channel_id = channel_info.get("id")
             
-            if not videos and channel_id:
-                alt_url = f"https://www.youtube.com/channel/{channel_id}/videos"
-                channel_name, videos = scrape_youtube_channel_videos(alt_url)
-        
-        # If we still don't have videos or we have less than 6, use our static data as examples
-        if not videos or len(videos) < 6:
-            logging.info(f"Using static sample videos as fallback. Found {len(videos)} videos from scraping.")
-            
-            # General set of sample videos from various educational channels
-            sample_videos = [
-                {
-                    "id": "bCkPXBXGsIQ",
-                    "title": "Why are Hydrogen Fuel Cells So Expensive? - Just Have a Think",
-                    "link": "https://www.youtube.com/watch?v=bCkPXBXGsIQ",
-                    "channel": {"name": "Just Have A Think"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/bCkPXBXGsIQ/maxresdefault.jpg"}
-                },
-                {
-                    "id": "Nj-hdQMa3uA",
-                    "title": "Dr. Andrew Huberman: \"Most People Only Need 6 Hours of Sleep\" | Lex Fridman Podcast",
-                    "link": "https://www.youtube.com/watch?v=Nj-hdQMa3uA",
-                    "channel": {"name": "Lex Fridman"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/Nj-hdQMa3uA/maxresdefault.jpg"}
-                },
-                {
-                    "id": "gLJowTOkZVo",
-                    "title": "How to Fall Asleep & Sleep Better | Huberman Lab Podcast #2",
-                    "link": "https://www.youtube.com/watch?v=gLJowTOkZVo",
-                    "channel": {"name": "Andrew Huberman"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/gLJowTOkZVo/maxresdefault.jpg"}
-                },
-                {
-                    "id": "9tjGg8WnxlQ", 
-                    "title": "Atmospheric CO2 Removal - Just Have a Think",
-                    "link": "https://www.youtube.com/watch?v=9tjGg8WnxlQ",
-                    "channel": {"name": "Just Have A Think"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/9tjGg8WnxlQ/maxresdefault.jpg"}
-                },
-                {
-                    "id": "vPOl5VqpBuw",
-                    "title": "The Power Company that's Ditching Fossil Fuels - Just Have a Think", 
-                    "link": "https://www.youtube.com/watch?v=vPOl5VqpBuw",
-                    "channel": {"name": "Just Have A Think"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/vPOl5VqpBuw/maxresdefault.jpg"}
-                },
-                {
-                    "id": "cxRm6u3mfbI",
-                    "title": "What Will Happen When We Run Out of Food? - Just Have a Think",
-                    "link": "https://www.youtube.com/watch?v=cxRm6u3mfbI", 
-                    "channel": {"name": "Just Have A Think"},
-                    "thumbnail": {"static": "https://img.youtube.com/vi/cxRm6u3mfbI/maxresdefault.jpg"}
+            # Get videos from this specific channel
+            channel_response = requests.get(
+                "https://www.searchapi.io/api/v1/search",
+                params={
+                    "engine": "youtube",
+                    "channel_id": channel_id,
+                    "api_key": searchapi_key,
+                    "num": 6  # Request exactly 6 videos
                 }
-            ]
+            )
             
-            needed_videos = 6 - len(videos)
+            if channel_response.status_code == 200:
+                channel_data = channel_response.json()
+                videos = channel_data.get("video_results", [])
+                
+                if videos:
+                    return {
+                        "channel_name": channel_name,
+                        "videos": videos[:6]  # Ensure we return at most 6
+                    }
+        
+        # If channel-specific search didn't yield results, use the video results from original search
+        videos = data.get("video_results", [])
+        
+        # If we have videos, try to extract channel name from first video
+        channel_name = "YouTube Channel"
+        if videos and videos[0].get("channel", {}).get("name"):
+            channel_name = videos[0]["channel"]["name"]
+        elif "channel_results" in data and data["channel_results"]:
+            channel_name = data["channel_results"][0].get("name", "YouTube Channel")
+        elif channel_handle:
+            channel_name = f"@{channel_handle}"
+        
+        # Ensure we have exactly 6 videos
+        if len(videos) < 6:
+            # Not enough videos found, try another search with broader terms
+            broader_query = "popular videos"
+            if channel_handle:
+                broader_query = channel_handle
             
-            # Add sample videos to reach 6 total
-            for i in range(min(needed_videos, len(sample_videos))):
-                videos.append(sample_videos[i])
+            broader_response = requests.get(
+                "https://www.searchapi.io/api/v1/search",
+                params={
+                    "engine": "youtube",
+                    "q": broader_query,
+                    "api_key": searchapi_key,
+                    "num": 10
+                }
+            )
             
-            # If no channel name was found, show the URL domain
-            if not channel_name:
-                if channel_handle:
-                    channel_name = f"@{channel_handle}"
-                elif channel_id:
-                    channel_name = f"Channel ID: {channel_id}"
-                else:
-                    channel_name = "YouTube Channel"
+            if broader_response.status_code == 200:
+                broader_data = broader_response.json()
+                more_videos = broader_data.get("video_results", [])
+                
+                # Add more videos to reach 6 total, avoiding duplicates
+                video_ids = [v.get("id") for v in videos]
+                for video in more_videos:
+                    if len(videos) >= 6:
+                        break
+                    if video.get("id") not in video_ids:
+                        videos.append(video)
+                        video_ids.append(video.get("id"))
         
         return {
             "channel_name": channel_name,
