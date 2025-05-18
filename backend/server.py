@@ -239,24 +239,24 @@ def summarize_song_lyrics(text):
     
     # If we have very few unique lines, return them all
     if len(unique_lyrics) < 8:
-        return "\n".join(unique_lyrics)
+        return "🎤 " + "\n🎵 ".join(unique_lyrics)
     
     # Otherwise, take representative samples
     summary = []
     
     # Always include first line if available
     if unique_lyrics and len(unique_lyrics) > 0:
-        summary.append(unique_lyrics[0])
+        summary.append("🎤 " + unique_lyrics[0])
     
     # Take samples at regular intervals
     if len(unique_lyrics) > 5:
         interval = max(1, len(unique_lyrics) // 5)
         for i in range(interval, len(unique_lyrics), interval):
-            summary.append(unique_lyrics[i])
+            summary.append("🎵 " + unique_lyrics[i])
     
     # Always include last line if not already included
     if unique_lyrics and unique_lyrics[-1] not in summary:
-        summary.append(unique_lyrics[-1])
+        summary.append("🎶 " + unique_lyrics[-1])
     
     return "\n".join(summary)
 
