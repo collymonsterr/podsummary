@@ -280,7 +280,7 @@ const Home = () => {
 
         {showHistory && (
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">📚 Previously Summarized Videos</h2>
+            <h2 className="text-xl font-semibold mb-3">📚 Previously Summarized Podcasts</h2>
             {history.length === 0 ? (
               <p className="text-gray-500">No history available</p>
             ) : (
