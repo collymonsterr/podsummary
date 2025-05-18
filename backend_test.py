@@ -111,6 +111,45 @@ class PodBriefAPITester:
             return True
         return False
 
+    def test_channel_videos(self):
+        """Test the channel-videos endpoint"""
+        channel_url = "https://www.youtube.com/@hubermanlab"
+        success, response = self.run_test(
+            "Get Channel Videos",
+            "POST",
+            "channel-videos",
+            200,
+            data={"channel_url": channel_url}
+        )
+        
+        if success:
+            if "channel_name" in response and "videos" in response:
+                print(f"✅ Channel name: {response['channel_name']}")
+                print(f"✅ Retrieved {len(response['videos'])} videos")
+                
+                # Check if we have the expected number of videos (should be 6 based on server.py)
+                if len(response['videos']) == 6:
+                    print("✅ Correct number of videos returned (6)")
+                else:
+                    print(f"⚠️ Expected 6 videos, got {len(response['videos'])}")
+                
+                # Check if videos have required fields
+                if response['videos']:
+                    first_video = response['videos'][0]
+                    required_fields = ["id", "title", "link", "thumbnail"]
+                    missing_fields = [field for field in required_fields if field not in first_video]
+                    
+                    if missing_fields:
+                        print(f"❌ Video missing required fields: {', '.join(missing_fields)}")
+                        return False
+                    
+                    print(f"✅ First video title: {first_video['title']}")
+                return True
+            else:
+                print("❌ Response missing 'channel_name' or 'videos' fields")
+                return False
+        return False
+
     def test_admin_delete(self):
         """Test the admin delete endpoint"""
         if not hasattr(self, 'history_item_id'):
