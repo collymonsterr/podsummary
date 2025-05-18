@@ -480,6 +480,45 @@ async def get_summary_history():
     
     return [StoredTranscript(**item) for item in history]
 
+# Update metadata for existing videos without metadata
+@api_router.post("/update-metadata", response_model=dict)
+async def update_video_metadata():
+    # Find all videos without metadata
+    videos_without_metadata = await db.transcripts.find({
+        "$or": [
+            {"title": None},
+            {"channel": None},
+            {"thumbnail_url": None},
+            {"title": {"$exists": False}},
+            {"channel": {"$exists": False}},
+            {"thumbnail_url": {"$exists": False}}
+        ]
+    }).to_list(100)
+    
+    updated_count = 0
+    
+    # Update each video
+    for video in videos_without_metadata:
+        if "video_id" in video:
+            try:
+                title, channel, thumbnail_url = await get_video_metadata(video["video_id"])
+                
+                if title and channel:
+                    # Update the database entry
+                    await db.transcripts.update_one(
+                        {"_id": video["_id"]},
+                        {"$set": {
+                            "title": title,
+                            "channel": channel,
+                            "thumbnail_url": thumbnail_url
+                        }}
+                    )
+                    updated_count += 1
+            except Exception as e:
+                logging.error(f"Error updating metadata for video {video['video_id']}: {str(e)}")
+    
+    return {"updated_videos": updated_count, "total_processed": len(videos_without_metadata)}
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
