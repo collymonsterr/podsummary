@@ -221,8 +221,8 @@ const Home = () => {
   return (
     <div className="max-w-5xl mx-auto p-4 bg-gray-50 min-h-screen">
       <header className="text-center mb-8 pt-8 relative">
-        <h1 className="text-3xl font-bold text-indigo-700">🎬 YouTube Video Summarizer</h1>
-        <p className="text-gray-600 mt-2">✨ Get a concise summary from any YouTube video transcript</p>
+        <h1 className="text-3xl font-bold text-indigo-700">🎧 Podbrief</h1>
+        <p className="text-gray-600 mt-2">Concise summaries of your favourite podcasts—so you only spend time on the episodes that matter.</p>
         
         {/* Admin button */}
         <button 
