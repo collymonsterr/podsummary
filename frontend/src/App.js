@@ -62,6 +62,8 @@ const Home = () => {
   const [currentVideo, setCurrentVideo] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminKey, setAdminKey] = useState("");
+  const [channelUrl, setChannelUrl] = useState("");
+  const navigate = useNavigate();
   
   // Set document title on load
   useEffect(() => {
