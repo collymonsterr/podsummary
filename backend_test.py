@@ -191,6 +191,16 @@ class YouTubeSummarizerTester:
                     # Get the most recent item
                     most_recent = history_items[0]
                     logger.info(f"📅 Most recent summary: {most_recent.get('url')} ({most_recent.get('video_id')})")
+                    
+                    # Check for emojis in the most recent summary
+                    if 'summary' in most_recent and most_recent['summary']:
+                        emoji_pattern = re.compile(r'[\U0001F300-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001f926-\U0001f937]')
+                        emojis_found = emoji_pattern.findall(most_recent['summary'])
+                        
+                        if emojis_found:
+                            logger.info(f"✅ Found {len(emojis_found)} emojis in history summary: {''.join(emojis_found[:10])}")
+                        else:
+                            logger.warning("⚠️ No emojis found in history summary")
                 else:
                     logger.warning("⚠️ No history items found")
                 
