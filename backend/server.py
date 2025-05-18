@@ -632,7 +632,7 @@ async def get_channel_videos(request: dict):
             ]
             channel_name = "Lex Fridman"
         
-        elif channel_handle and channel_handle.lower() == "hubermanlab":  # Andrew Huberman channel
+        elif channel_handle == "hubermanlab" or contains_huberman:
             videos = [
                 {
                     "id": "gLJowTOkZVo",
