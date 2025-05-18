@@ -12,6 +12,13 @@ from datetime import datetime
 import requests
 import openai
 import re
+import nltk
+
+# Download NLTK data at startup
+try:
+    nltk.download('punkt')
+except Exception as e:
+    logging.warning(f"Failed to download NLTK data: {str(e)}")
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
