@@ -175,7 +175,10 @@ async def summarize_text(text):
 async def summarize_youtube_video(request: VideoRequest):
     try:
         # Extract YouTube video ID from URL
-        video_id = extract_video_id(request.youtube_url)
+        try:
+            video_id = extract_video_id(request.youtube_url)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
         # Check if we already have this video in our database
         existing = await db.transcripts.find_one({"video_id": video_id})
@@ -187,34 +190,43 @@ async def summarize_youtube_video(request: VideoRequest):
                 url=existing["url"]
             )
         
-        # Get transcript from YouTube
-        transcript = await get_transcript(video_id)
-        
-        # Generate summary using OpenAI
-        summary = await summarize_text(transcript)
-        
-        # Store in database
-        transcript_obj = StoredTranscript(
-            video_id=video_id,
-            url=request.youtube_url,
-            transcript=transcript,
-            summary=summary
-        )
-        
-        await db.transcripts.insert_one(transcript_obj.dict())
-        
-        return TranscriptResponse(
-            transcript=transcript,
-            summary=summary,
-            video_id=video_id,
-            url=request.youtube_url
-        )
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        try:
+            # Get transcript from YouTube
+            transcript = await get_transcript(video_id)
+            
+            # Generate summary using OpenAI
+            summary = await summarize_text(transcript)
+            
+            # Store in database
+            transcript_obj = StoredTranscript(
+                video_id=video_id,
+                url=request.youtube_url,
+                transcript=transcript,
+                summary=summary
+            )
+            
+            await db.transcripts.insert_one(transcript_obj.dict())
+            
+            return TranscriptResponse(
+                transcript=transcript,
+                summary=summary,
+                video_id=video_id,
+                url=request.youtube_url
+            )
+        except HTTPException as e:
+            # Re-raise HTTP exceptions with their status codes
+            raise e
+        except Exception as e:
+            # Log the error and return a 500 status
+            logging.error(f"Error processing valid YouTube URL: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        logging.error(f"Error in summarize_youtube_video: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+        logging.error(f"Unexpected error in summarize_youtube_video: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 # Get history of previously summarized videos
 @api_router.get("/history", response_model=List[StoredTranscript])
