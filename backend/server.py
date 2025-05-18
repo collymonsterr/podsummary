@@ -76,11 +76,12 @@ def extract_video_id(url):
 
 # Get transcript using SearchAPI.io
 async def get_transcript(video_id):
-    url = "https://www.searchapi.io/api/v1/youtube-transcript"
+    url = "https://www.searchapi.io/api/v1/search"
     params = {
+        "engine": "youtube_transcripts",
         "api_key": searchapi_key,
         "video_id": video_id,
-        "language": "en"
+        "lang": "en"
     }
     
     response = requests.get(url, params=params)
