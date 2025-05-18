@@ -727,10 +727,6 @@ async def get_channel_videos(request: dict):
     except Exception as e:
         logging.error(f"Error fetching channel videos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-        
-    except Exception as e:
-        logging.error(f"Error fetching channel videos: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
