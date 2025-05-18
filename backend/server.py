@@ -585,7 +585,7 @@ async def get_channel_videos(request: dict):
             ]
             channel_name = "Just Have A Think"
         
-        elif channel_handle and channel_handle.lower() == "lexfridman":  # Lex Fridman channel
+        elif channel_handle == "lexfridman" or contains_lexfridman:
             videos = [
                 {
                     "id": "Nj-hdQMa3uA",
