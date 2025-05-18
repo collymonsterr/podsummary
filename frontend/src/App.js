@@ -84,8 +84,8 @@ const Home = () => {
   return (
     <div className="max-w-4xl mx-auto p-4 bg-gray-50 min-h-screen">
       <header className="text-center mb-8 pt-8">
-        <h1 className="text-3xl font-bold text-indigo-700">YouTube Video Summarizer</h1>
-        <p className="text-gray-600 mt-2">Get a concise summary from any YouTube video transcript</p>
+        <h1 className="text-3xl font-bold text-indigo-700">🎬 YouTube Video Summarizer</h1>
+        <p className="text-gray-600 mt-2">✨ Get a concise summary from any YouTube video transcript</p>
       </header>
 
       <div className="bg-white shadow-md rounded-lg p-6 mb-8">
@@ -95,7 +95,7 @@ const Home = () => {
               type="text"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
-              placeholder="Paste YouTube URL here (e.g. https://www.youtube.com/watch?v=...)"
+              placeholder="🔗 Paste YouTube URL here (e.g. https://www.youtube.com/watch?v=...)"
               className="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
@@ -108,14 +108,14 @@ const Home = () => {
                   : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
-              {isLoading ? "Processing..." : "Summarize"}
+              {isLoading ? "⏳ Processing..." : "✨ Summarize"}
             </button>
           </div>
         </form>
 
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6">
-            {error}
+            ⚠️ {error}
           </div>
         )}
 
@@ -124,13 +124,13 @@ const Home = () => {
             onClick={() => setShowHistory(!showHistory)}
             className="text-sm text-indigo-600 hover:text-indigo-800 underline"
           >
-            {showHistory ? "Hide History" : "Show History"}
+            {showHistory ? "📁 Hide History" : "📋 Show History"}
           </button>
         </div>
 
         {showHistory && (
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">Previously Summarized Videos</h2>
+            <h2 className="text-xl font-semibold mb-3">📚 Previously Summarized Videos</h2>
             {history.length === 0 ? (
               <p className="text-gray-500">No history available</p>
             ) : (
@@ -141,9 +141,9 @@ const Home = () => {
                     className="p-3 hover:bg-gray-50 cursor-pointer"
                     onClick={() => loadFromHistory(item)}
                   >
-                    <div className="line-clamp-1 text-indigo-600">{item.url}</div>
+                    <div className="line-clamp-1 text-indigo-600">🔗 {item.url}</div>
                     <div className="line-clamp-1 text-sm text-gray-500">
-                      {new Date(item.timestamp).toLocaleString()}
+                      🕒 {new Date(item.timestamp).toLocaleString()}
                     </div>
                   </div>
                 ))}
@@ -163,7 +163,7 @@ const Home = () => {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Summary
+                📝 Summary
               </button>
               <button
                 onClick={() => setActiveSection("transcript")}
@@ -173,20 +173,20 @@ const Home = () => {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Transcript
+                📃 Transcript
               </button>
             </div>
 
             {activeSection === "summary" && (
               <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
-                <h2 className="text-xl font-semibold mb-3">Summary</h2>
-                {summary}
+                <h2 className="text-xl font-semibold mb-3">📝 Summary</h2>
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: summary.replace(/\n/g, '<br>') }}></div>
               </div>
             )}
 
             {activeSection === "transcript" && (
               <div className="bg-gray-50 p-4 rounded-md">
-                <h2 className="text-xl font-semibold mb-3">Transcript</h2>
+                <h2 className="text-xl font-semibold mb-3">📃 Transcript</h2>
                 <div className="max-h-96 overflow-y-auto whitespace-pre-line">
                   {transcript}
                 </div>
