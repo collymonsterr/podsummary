@@ -135,6 +135,10 @@ async def summarize_text(text):
     except Exception as openai_error:
         logging.error(f"OpenAI API error: {str(openai_error)}")
         
+        # Special handling for song lyrics
+        if "♪" in text:
+            return "This appears to be a song with lyrics. Here's a summary of the key lyrics:\n\n" + summarize_song_lyrics(text)
+        
         # Simple extractive summarization fallback that will always work
         logging.info("Using basic fallback summarization method")
         try:
@@ -142,7 +146,7 @@ async def summarize_text(text):
             chunks = text.split('. ')
             
             # For very short text, just return it
-            if len(text) < 200 or len(chunks) < 5:
+            if len(text) < 500 or len(chunks) < 5:
                 return "The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
                 
             # Create a simple extractive summary
@@ -188,6 +192,42 @@ async def summarize_text(text):
             logging.error(f"Error in fallback summarization: {str(fallback_error)}")
             # Ultimate fallback - return a message that still allows the user to see the transcript
             return "Sorry, we couldn't generate a summary for this video. Please check the transcript tab to see the full text."
+
+def summarize_song_lyrics(text):
+    """Special function to summarize song lyrics"""
+    lines = text.split("\n")
+    
+    # Filter out music notes and empty lines
+    lyrics = [line.strip() for line in lines if line.strip() and "♪" not in line]
+    
+    # Remove duplicates (common in songs with chorus)
+    unique_lyrics = []
+    for line in lyrics:
+        if line not in unique_lyrics:
+            unique_lyrics.append(line)
+    
+    # If we have very few unique lines, return them all
+    if len(unique_lyrics) < 8:
+        return "\n".join(unique_lyrics)
+    
+    # Otherwise, take representative samples
+    summary = []
+    
+    # Always include first line if available
+    if unique_lyrics and len(unique_lyrics) > 0:
+        summary.append(unique_lyrics[0])
+    
+    # Take samples at regular intervals
+    if len(unique_lyrics) > 5:
+        interval = max(1, len(unique_lyrics) // 5)
+        for i in range(interval, len(unique_lyrics), interval):
+            summary.append(unique_lyrics[i])
+    
+    # Always include last line if not already included
+    if unique_lyrics and unique_lyrics[-1] not in summary:
+        summary.append(unique_lyrics[-1])
+    
+    return "\n".join(summary)
 
 # Route to get transcript and summary from YouTube URL
 @api_router.post("/summarize", response_model=TranscriptResponse)
