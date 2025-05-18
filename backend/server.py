@@ -536,6 +536,26 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
+# Admin endpoint for deleting a transcript
+@api_router.delete("/admin/transcript/{transcript_id}")
+async def delete_transcript(transcript_id: str, admin_key: str = Header(None)):
+    # Verify admin key
+    if admin_key != os.environ.get('ADMIN_KEY'):
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+    
+    try:
+        # Find and delete the transcript
+        result = await db.transcripts.delete_one({"id": transcript_id})
+        
+        if result.deleted_count == 0:
+            # Try with _id as ObjectId if id didn't work
+            raise HTTPException(status_code=404, detail=f"Transcript with ID {transcript_id} not found")
+        
+        # Return success response
+        return {"status": "success", "message": f"Transcript {transcript_id} deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting transcript: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
