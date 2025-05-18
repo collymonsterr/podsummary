@@ -124,8 +124,8 @@ async def summarize_text(text):
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that summarizes YouTube video transcripts. Create a concise but comprehensive summary that captures the key points, main arguments, and important details from the transcript."},
-                {"role": "user", "content": f"Please summarize this transcript: {text}"}
+                {"role": "system", "content": "You are a helpful assistant that creates clear, concise summaries of YouTube video transcripts."},
+                {"role": "user", "content": f"Summarise this video transcript clearly and concisely. List the main topics discussed in the order they appear, and highlight the most interesting or surprising insights. Write it so someone can quickly decide if it's worth watching the full video.\n\nTranscript:\n{text}"}
             ],
             temperature=0.5,
             max_tokens=1000
@@ -137,7 +137,7 @@ async def summarize_text(text):
         
         # Special handling for song lyrics
         if "♪" in text:
-            return "This appears to be a song with lyrics. Here's a summary of the key lyrics:\n\n" + summarize_song_lyrics(text)
+            return "This appears to be a song with lyrics. Here are the main lyrics:\n\n" + summarize_song_lyrics(text)
         
         # Simple extractive summarization fallback that will always work
         logging.info("Using basic fallback summarization method")
@@ -149,44 +149,50 @@ async def summarize_text(text):
             if len(text) < 500 or len(chunks) < 5:
                 return "The transcript is too short to summarize effectively. Here it is in full:\n\n" + text
                 
-            # Create a simple extractive summary
-            summary_chunks = []
+            # Create a simple extractive summary with proper formatting to match requested style
+            summary = "# Summary of Video Transcript\n\n"
+            summary += "## Main Topics Discussed\n\n"
+            
+            # Extract topics from chunks
+            topics = []
             
             # Always take the first chunk (often contains title or intro)
             if chunks[0]:
-                summary_chunks.append(chunks[0])
+                topics.append("1. Introduction: " + chunks[0].strip())
                 
-            # Take samples throughout the text
+            # Take samples throughout the text for main points
             if len(chunks) > 10:
                 # For longer texts, take samples at regular intervals
                 sample_interval = max(1, len(chunks) // 5)
-                for i in range(sample_interval, len(chunks), sample_interval):
-                    if chunks[i].strip():
-                        summary_chunks.append(chunks[i].strip())
+                for i in range(1, 5):  # Get about 4-5 main points
+                    idx = min(i * sample_interval, len(chunks) - 1)
+                    if chunks[idx].strip():
+                        topics.append(f"{i+1}. {chunks[idx].strip()}")
             else:
                 # For shorter texts, take every other chunk
-                for i in range(1, len(chunks), 2):
+                for i in range(1, min(5, len(chunks))):
                     if chunks[i].strip():
-                        summary_chunks.append(chunks[i].strip())
+                        topics.append(f"{i+1}. {chunks[i].strip()}")
             
-            # Always include the last chunk if not already included (often contains conclusion)
-            if chunks[-1] and chunks[-1] not in summary_chunks:
-                summary_chunks.append(chunks[-1])
-                
-            # Join the summary chunks with periods where needed
-            processed_chunks = []
-            for chunk in summary_chunks:
-                chunk = chunk.strip()
-                if chunk and not chunk.endswith(('.', '!', '?', '"', '♪')):
-                    chunk += '.'
-                if chunk:
-                    processed_chunks.append(chunk)
+            # Add the topics to the summary
+            summary += "\n".join(topics)
             
-            # Join all chunks with spaces
-            final_summary = " ".join(processed_chunks)
+            # Add insights section
+            summary += "\n\n## Key Insights\n\n"
             
-            # Add a note about the fallback method
-            return "Note: This is an automatic extraction of key points from the transcript (OpenAI summarization unavailable).\n\n" + final_summary
+            # Take last chunk as conclusion or insight if available
+            if chunks[-1] and chunks[-1] not in topics:
+                summary += "* " + chunks[-1].strip() + "\n"
+            
+            # Add a sample from middle of video as another insight
+            mid_idx = len(chunks) // 2
+            if chunks[mid_idx] and chunks[mid_idx] not in topics:
+                summary += "* " + chunks[mid_idx].strip() + "\n"
+            
+            # Add disclaimer about the fallback method
+            summary += "\n\n*Note: This is an automatic summary created without AI due to API limits. For best results, try again later.*"
+            
+            return summary
             
         except Exception as fallback_error:
             logging.error(f"Error in fallback summarization: {str(fallback_error)}")
