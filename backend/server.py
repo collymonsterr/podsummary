@@ -522,7 +522,7 @@ async def update_video_metadata():
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "YouTube Summarizer API is running"}
+    return {"message": "Podbrief API is running"}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
