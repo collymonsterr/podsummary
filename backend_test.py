@@ -87,34 +87,90 @@ def main():
         print("❌ API status check failed, stopping tests")
         return 1
 
-    # Test video summarization
-    test_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
-    summary_success, summary_response = tester.test_summarize_video(test_video_url)
+    # Test "Just Have a Think" channel videos
+    justhaveathink_url = "https://www.youtube.com/@JustHaveaThink"
+    justhaveathink_success, justhaveathink_response = tester.test_channel_videos(justhaveathink_url)
     
-    if summary_success:
-        print(f"Video ID: {summary_response.get('video_id')}")
-        print(f"Title: {summary_response.get('title')}")
-        print(f"Channel: {summary_response.get('channel')}")
-        print(f"Summary length: {len(summary_response.get('summary', ''))}")
-        print(f"Transcript length: {len(summary_response.get('transcript', ''))}")
+    if justhaveathink_success:
+        print(f"Channel name: {justhaveathink_response.get('channel_name')}")
+        videos = justhaveathink_response.get('videos', [])
+        print(f"Videos found: {len(videos)}")
+        
+        # Verify we have exactly 6 videos for Just Have a Think
+        if len(videos) == 6:
+            print("✅ Correct number of videos (6) returned for Just Have a Think")
+            
+            # Check if all videos are from the correct channel
+            all_correct_channel = all(video.get('channel', {}).get('name') == "Just Have A Think" for video in videos)
+            if all_correct_channel:
+                print("✅ All videos are from the correct channel")
+            else:
+                print("❌ Some videos are not from the correct channel")
+                
+            # Print video titles for verification
+            print("\nJust Have a Think videos:")
+            for i, video in enumerate(videos):
+                print(f"{i+1}. {video.get('title')}")
+        else:
+            print(f"❌ Expected 6 videos, got {len(videos)}")
     else:
-        print("❌ Video summarization failed")
+        print("❌ Just Have a Think channel videos retrieval failed")
 
+    # Test Huberman Lab channel videos
+    huberman_url = "https://www.youtube.com/@hubermanlab"
+    huberman_success, huberman_response = tester.test_channel_videos(huberman_url)
+    
+    if huberman_success:
+        print(f"\nChannel name: {huberman_response.get('channel_name')}")
+        videos = huberman_response.get('videos', [])
+        print(f"Videos found: {len(videos)}")
+        
+        # Print video titles for verification
+        print("\nHuberman Lab videos:")
+        for i, video in enumerate(videos):
+            print(f"{i+1}. {video.get('title')}")
+    else:
+        print("❌ Huberman Lab channel videos retrieval failed")
+
+    # Test Lex Fridman channel videos
+    lex_url = "https://www.youtube.com/@lexfridman"
+    lex_success, lex_response = tester.test_channel_videos(lex_url)
+    
+    if lex_success:
+        print(f"\nChannel name: {lex_response.get('channel_name')}")
+        videos = lex_response.get('videos', [])
+        print(f"Videos found: {len(videos)}")
+        
+        # Print video titles for verification
+        print("\nLex Fridman videos:")
+        for i, video in enumerate(videos):
+            print(f"{i+1}. {video.get('title')}")
+    else:
+        print("❌ Lex Fridman channel videos retrieval failed")
+
+    # Test video summarization for one of the Just Have a Think videos
+    if justhaveathink_success and len(justhaveathink_response.get('videos', [])) > 0:
+        test_video = justhaveathink_response['videos'][0]
+        test_video_url = test_video.get('link')
+        print(f"\nTesting summarization for video: {test_video.get('title')}")
+        
+        summary_success, summary_response = tester.test_summarize_video(test_video_url)
+        
+        if summary_success:
+            print(f"Video ID: {summary_response.get('video_id')}")
+            print(f"Title: {summary_response.get('title')}")
+            print(f"Channel: {summary_response.get('channel')}")
+            print(f"Summary length: {len(summary_response.get('summary', ''))}")
+            print(f"Transcript length: {len(summary_response.get('transcript', ''))}")
+        else:
+            print("❌ Video summarization failed")
+    
     # Test history endpoint
     history_success, history_response = tester.test_get_history()
     if history_success:
-        print(f"History items: {len(history_response)}")
+        print(f"\nHistory items: {len(history_response)}")
     else:
         print("❌ History retrieval failed")
-
-    # Test channel videos endpoint
-    channel_url = "https://www.youtube.com/@hubermanlab"
-    channel_success, channel_response = tester.test_channel_videos(channel_url)
-    if channel_success:
-        print(f"Channel name: {channel_response.get('channel_name')}")
-        print(f"Videos found: {len(channel_response.get('videos', []))}")
-    else:
-        print("❌ Channel videos retrieval failed")
 
     # Print results
     print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
