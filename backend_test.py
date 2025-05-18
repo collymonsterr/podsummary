@@ -18,8 +18,8 @@ class YouTubeSummarizerTester:
         
         # Test videos
         self.music_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
-        self.educational_video_url = "https://www.youtube.com/watch?v=F-g1jv-1Ocg"  # Educational video
-        self.short_video_url = "https://www.youtube.com/watch?v=jNQXAC9IVRw"  # First YouTube video
+        self.comedy_sketch_url = "https://www.youtube.com/watch?v=THNPmhBl-8I"  # Mitchell and Webb - Brain Surgery
+        self.ted_talk_url = "https://www.youtube.com/watch?v=_vS_b7cJn2A"  # TED talk
         self.invalid_video_url = "https://www.youtube.com/watch?v=invalid"
 
     def run_test(self, name, method, endpoint, expected_status, data=None, validate_func=None):
