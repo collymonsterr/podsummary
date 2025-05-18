@@ -76,6 +76,59 @@ const Home = ({ navigate }) => {
     document.title = "Podbrief - Podcast Summaries";
   }, []);
 
+  // Check for video param in URL 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const videoParam = params.get("video");
+    
+    if (videoParam) {
+      setYoutubeUrl(videoParam);
+      // Automatically trigger summarization for the video in URL
+      handleSummarizeFromURL(videoParam);
+    }
+  }, []);
+  
+  // Function to handle summarization from URL parameter
+  const handleSummarizeFromURL = async (url) => {
+    setIsLoading(true);
+    setError("");
+    setTranscript("");
+    setSummary("");
+    setIsCached(false);
+    setCurrentVideo(null);
+    
+    try {
+      const response = await axios.post(`${API}/summarize`, {
+        youtube_url: url
+      });
+      
+      setTranscript(response.data.transcript);
+      setSummary(response.data.summary);
+      setIsCached(response.data.is_cached);
+      
+      // Set current video data
+      setCurrentVideo({
+        title: response.data.title,
+        channel: response.data.channel,
+        thumbnail_url: response.data.thumbnail_url,
+        video_id: response.data.video_id,
+        url: response.data.url
+      });
+      
+      // Refresh history after new summary
+      const historyResponse = await axios.get(`${API}/history`);
+      const historyData = historyResponse.data;
+      setHistory(historyData);
+      setRecentVideos(historyData.slice(0, 6));
+      
+    } catch (e) {
+      console.error("Summarization error:", e);
+      setError(e.response?.data?.detail || "Failed to get summary. Please check the URL and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check if admin key is in localStorage on load
   useEffect(() => {
     const storedAdminKey = localStorage.getItem("adminKey");
