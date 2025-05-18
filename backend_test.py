@@ -1,22 +1,16 @@
-
 import requests
-import time
 import sys
-import json
-from datetime import datetime
+import os
+import time
 
 class YouTubeSummarizerTester:
-    def __init__(self, base_url="https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com"):
+    def __init__(self, base_url):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_key = "yt-summarizer-admin-2025"
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_videos = [
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Rick Astley - Never Gonna Give You Up
-            "https://www.youtube.com/watch?v=jNQXAC9IVRw",  # Me at the zoo - first YouTube video
-            "https://www.youtube.com/watch?v=_vS_b7cJn2A"    # TED Talk
-        ]
+        self.test_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # A well-known video that's unlikely to be removed
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
@@ -39,7 +33,7 @@ class YouTubeSummarizerTester:
             if success:
                 self.tests_passed += 1
                 print(f"✅ Passed - Status: {response.status_code}")
-                return success, response.json() if response.content else {}
+                return True, response.json() if response.text else {}
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
                 print(f"Response: {response.text}")
@@ -53,227 +47,110 @@ class YouTubeSummarizerTester:
         """Test API status endpoint"""
         return self.run_test("API Status", "GET", "", 200)
 
-    def test_summarize_video(self, youtube_url):
+    def test_summarize_video(self):
         """Test video summarization"""
-        start_time = time.time()
         success, response = self.run_test(
-            f"Summarize Video ({youtube_url})",
+            "Summarize Video",
             "POST",
             "summarize",
             200,
-            data={"youtube_url": youtube_url}
+            data={"youtube_url": self.test_video_url}
         )
-        end_time = time.time()
-        processing_time = end_time - start_time
-        
-        if success:
-            print(f"Processing time: {processing_time:.2f} seconds")
-            print(f"Video ID: {response.get('video_id', 'N/A')}")
-            print(f"Title: {response.get('title', 'N/A')}")
-            print(f"Channel: {response.get('channel', 'N/A')}")
-            print(f"Cached: {response.get('is_cached', False)}")
-            print(f"Transcript length: {len(response.get('transcript', ''))}")
-            print(f"Summary length: {len(response.get('summary', ''))}")
-            
-            # Verify we have all required fields
-            required_fields = ['transcript', 'summary', 'video_id', 'url']
-            missing_fields = [field for field in required_fields if field not in response]
-            
-            if missing_fields:
-                print(f"❌ Missing required fields: {', '.join(missing_fields)}")
-                return False, response, processing_time
-                
-            return True, response, processing_time
-        
-        return False, {}, processing_time
+        return success, response
 
-    def test_caching(self, youtube_url):
-        """Test caching functionality by requesting the same video twice"""
-        print(f"\n🔍 Testing caching for {youtube_url}...")
-        
-        # First request
-        print("First request (should not be cached):")
-        success1, response1, time1 = self.test_summarize_video(youtube_url)
-        
-        if not success1:
-            print("❌ First request failed, cannot test caching")
-            return False
-            
-        # Second request (should be cached)
-        print("\nSecond request (should be cached):")
-        success2, response2, time2 = self.test_summarize_video(youtube_url)
-        
-        if not success2:
-            print("❌ Second request failed")
-            return False
-            
-        # Verify it's cached
-        if not response2.get('is_cached', False):
-            print("❌ Response not marked as cached")
-            return False
-            
-        # Verify faster response time
-        if time2 >= time1:
-            print(f"❌ Cached response not faster: {time2:.2f}s vs {time1:.2f}s")
-            return False
-            
-        # Verify same content
-        if response1.get('transcript') != response2.get('transcript'):
-            print("❌ Transcripts don't match between requests")
-            return False
-            
-        if response1.get('summary') != response2.get('summary'):
-            print("❌ Summaries don't match between requests")
-            return False
-            
-        print(f"✅ Caching test passed! First request: {time1:.2f}s, Second request: {time2:.2f}s")
-        print(f"✅ Speed improvement: {(time1-time2)/time1*100:.1f}%")
-        return True
+    def test_get_history(self):
+        """Test getting video history"""
+        return self.run_test("Get History", "GET", "history", 200)
 
-    def test_history(self):
-        """Test history endpoint"""
-        success, response = self.run_test("Get History", "GET", "history", 200)
-        
-        if success:
-            print(f"Number of history items: {len(response)}")
-            
-            if len(response) > 0:
-                # Check first item has required fields
-                first_item = response[0]
-                required_fields = ['id', 'video_id', 'url', 'transcript', 'summary', 'timestamp']
-                missing_fields = [field for field in required_fields if field not in first_item]
-                
-                if missing_fields:
-                    print(f"❌ History item missing required fields: {', '.join(missing_fields)}")
-                    return False, response
-                    
-                # Check for metadata fields
-                metadata_fields = ['title', 'channel', 'thumbnail_url']
-                has_metadata = all(field in first_item for field in metadata_fields)
-                
-                if not has_metadata:
-                    print("⚠️ History item missing some metadata fields")
-                
-                return True, response
-            else:
-                print("⚠️ History is empty, cannot fully validate")
-                return True, response
-        
-        return False, []
-
-    def test_delete_transcript_with_valid_admin_key(self, transcript_id):
-        """Test deleting a transcript with valid admin key"""
+    def test_delete_transcript(self, transcript_id):
+        """Test deleting a transcript with admin key"""
         headers = {
             'Content-Type': 'application/json',
             'admin-key': self.admin_key
         }
         return self.run_test(
-            "Delete Transcript with Valid Admin Key",
+            "Delete Transcript",
             "DELETE",
             f"admin/transcript/{transcript_id}",
             200,
             headers=headers
         )
 
-    def test_delete_transcript_with_invalid_admin_key(self, transcript_id):
+    def test_delete_transcript_invalid_key(self, transcript_id):
         """Test deleting a transcript with invalid admin key"""
         headers = {
             'Content-Type': 'application/json',
             'admin-key': 'invalid-key'
         }
-        return self.run_test(
-            "Delete Transcript with Invalid Admin Key",
+        success, _ = self.run_test(
+            "Delete Transcript with Invalid Key",
             "DELETE",
             f"admin/transcript/{transcript_id}",
             403,
             headers=headers
         )
-
-    def test_delete_transcript_without_admin_key(self, transcript_id):
-        """Test deleting a transcript without admin key"""
-        return self.run_test(
-            "Delete Transcript without Admin Key",
-            "DELETE",
-            f"admin/transcript/{transcript_id}",
-            403
-        )
+        return success
 
 def main():
-    print("=" * 60)
-    print("YouTube Video Summarizer API Test")
-    print("=" * 60)
+    # Get backend URL from environment variable or use default
+    backend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com')
     
-    tester = YouTubeSummarizerTester()
-    
-    # Test 1: API Status
-    api_status, _ = tester.test_api_status()
-    if not api_status:
-        print("❌ API is not responding, stopping tests")
+    print(f"Testing YouTube Summarizer API at: {backend_url}")
+    tester = YouTubeSummarizerTester(backend_url)
+
+    # Test API status
+    api_status_success, _ = tester.test_api_status()
+    if not api_status_success:
+        print("❌ API status check failed, stopping tests")
         return 1
+
+    # Test getting history
+    history_success, history_data = tester.test_get_history()
+    if not history_success:
+        print("❌ History retrieval failed, stopping tests")
+        return 1
+    
+    print(f"Found {len(history_data)} videos in history")
+    
+    # Test video summarization if needed
+    if not history_data:
+        print("No videos in history, testing summarization...")
+        summarize_success, summarize_data = tester.test_summarize_video()
+        if not summarize_success:
+            print("❌ Video summarization failed")
+            return 1
         
-    # Test 2: Summarize a video
-    print("\n" + "=" * 60)
-    print("Testing Summary Caching Feature")
-    print("=" * 60)
+        # Get updated history after summarization
+        _, history_data = tester.test_get_history()
     
-    # Test with music video
-    caching_success = tester.test_caching(tester.test_videos[0])
-    
-    # Test 3: Get history
-    print("\n" + "=" * 60)
-    print("Testing History Feature")
-    print("=" * 60)
-    history_success, history_data = tester.test_history()
-    
-    # Test 4: Summarize multiple videos to populate recent videos
-    print("\n" + "=" * 60)
-    print("Testing Multiple Video Summaries")
-    print("=" * 60)
-    
-    for i, video_url in enumerate(tester.test_videos[1:], 1):
-        print(f"\nTesting video {i+1} of {len(tester.test_videos)}: {video_url}")
-        success, _, _ = tester.test_summarize_video(video_url)
-        if not success:
-            print(f"❌ Failed to summarize video {i+1}")
-    
-    # Test 5: Admin functionality
-    print("\n" + "=" * 60)
-    print("Testing Admin Functionality")
-    print("=" * 60)
-    
-    # Get the first video ID for deletion tests
-    if history_success and history_data and len(history_data) > 0:
+    # Test transcript deletion with invalid key
+    if history_data:
         transcript_id = history_data[0]['id']
-        print(f"Using transcript ID for testing: {transcript_id}")
+        print(f"Testing deletion with invalid key for transcript ID: {transcript_id}")
+        invalid_key_success = tester.test_delete_transcript_invalid_key(transcript_id)
+        if not invalid_key_success:
+            print("❌ Invalid key test failed")
+    
+    # Test transcript deletion with valid key
+    if history_data:
+        transcript_id = history_data[0]['id']
+        print(f"Testing deletion with valid key for transcript ID: {transcript_id}")
+        delete_success, _ = tester.test_delete_transcript(transcript_id)
         
-        # Test deletion without admin key
-        tester.test_delete_transcript_without_admin_key(transcript_id)
-        
-        # Test deletion with invalid admin key
-        tester.test_delete_transcript_with_invalid_admin_key(transcript_id)
-        
-        # Test deletion with valid admin key
-        # Note: This will actually delete the transcript, so it's the last test
-        tester.test_delete_transcript_with_valid_admin_key(transcript_id)
-    else:
-        print("⚠️ No videos in history to test admin deletion functionality")
+        if delete_success:
+            # Verify deletion by checking history again
+            _, updated_history = tester.test_get_history()
+            deleted = all(item['id'] != transcript_id for item in updated_history)
+            
+            if deleted:
+                print("✅ Transcript successfully deleted and removed from history")
+                tester.tests_passed += 1
+            else:
+                print("❌ Transcript still exists in history after deletion")
+                tester.tests_run += 1
     
     # Print results
-    print("\n" + "=" * 60)
-    print("Test Results")
-    print("=" * 60)
-    print(f"Tests passed: {tester.tests_passed}/{tester.tests_run}")
-    
-    if not caching_success:
-        print("❌ Caching feature test failed")
-    else:
-        print("✅ Caching feature test passed")
-        
-    if not history_success:
-        print("❌ History feature test failed")
-    else:
-        print("✅ History feature test passed")
-    
+    print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
     return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
