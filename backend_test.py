@@ -15,7 +15,11 @@ class YouTubeSummarizerTester:
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
+        
+        # Test videos
+        self.music_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
+        self.educational_video_url = "https://www.youtube.com/watch?v=F-g1jv-1Ocg"  # Educational video
+        self.short_video_url = "https://www.youtube.com/watch?v=jNQXAC9IVRw"  # First YouTube video
         self.invalid_video_url = "https://www.youtube.com/watch?v=invalid"
 
     def run_test(self, name, method, endpoint, expected_status, data=None, validate_func=None):
