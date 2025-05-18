@@ -440,6 +440,32 @@ async def summarize_youtube_video(request: VideoRequest):
 @api_router.get("/history", response_model=List[StoredTranscript])
 async def get_summary_history():
     history = await db.transcripts.find().sort("timestamp", -1).to_list(20)
+    
+    # Process results to add any missing metadata for videos
+    for item in history:
+        # If we're missing metadata, try to fetch it
+        if (not item.get("title") or not item.get("channel") or not item.get("thumbnail_url")) and "video_id" in item:
+            try:
+                title, channel, thumbnail_url = await get_video_metadata(item["video_id"])
+                
+                # Update the record if we got metadata
+                if title and channel:
+                    await db.transcripts.update_one(
+                        {"_id": item["_id"]},
+                        {"$set": {
+                            "title": title,
+                            "channel": channel,
+                            "thumbnail_url": thumbnail_url
+                        }}
+                    )
+                    
+                    # Update the item in our results
+                    item["title"] = title
+                    item["channel"] = channel
+                    item["thumbnail_url"] = thumbnail_url
+            except Exception as e:
+                logging.error(f"Error fetching metadata for history item: {str(e)}")
+    
     return [StoredTranscript(**item) for item in history]
 
 # Add your routes to the router instead of directly to app
