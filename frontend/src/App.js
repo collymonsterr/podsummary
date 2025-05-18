@@ -245,7 +245,7 @@ const Home = () => {
               type="text"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
-              placeholder="🔗 Paste YouTube URL here (e.g. https://www.youtube.com/watch?v=...)"
+              placeholder="🔗 Paste YouTube URL with podcast (e.g. https://www.youtube.com/watch?v=...)"
               className="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
