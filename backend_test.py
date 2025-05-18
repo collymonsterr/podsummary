@@ -190,10 +190,16 @@ def main():
     
     tester = YouTubeSummarizerTester()
     
-    # Run tests
+    # Run basic API tests
     api_status_success, _ = tester.test_api_status()
     invalid_url_success, _ = tester.test_invalid_youtube_url()
-    valid_url_success, _ = tester.test_valid_youtube_url()
+    
+    # Test each video type
+    music_video_success, _ = tester.test_valid_youtube_url(tester.music_video_url, "Music")
+    educational_video_success, _ = tester.test_valid_youtube_url(tester.educational_video_url, "Educational")
+    short_video_success, _ = tester.test_valid_youtube_url(tester.short_video_url, "Short")
+    
+    # Test history
     history_success, _ = tester.test_get_history()
     
     # Print results
