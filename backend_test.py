@@ -3,6 +3,7 @@ import requests
 import sys
 import time
 import logging
+import re
 from urllib.parse import urlparse, parse_qs
 
 # Configure logging
