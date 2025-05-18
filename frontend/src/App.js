@@ -6,6 +6,34 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const VideoCard = ({ video, onClick }) => {
+  const defaultThumbnail = "https://via.placeholder.com/320x180?text=No+Thumbnail";
+  
+  return (
+    <div 
+      className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      onClick={() => onClick(video)}
+    >
+      <div className="relative pb-[56.25%]">
+        <img 
+          src={video.thumbnail_url || defaultThumbnail} 
+          alt={video.title || "Video thumbnail"} 
+          className="absolute h-full w-full object-cover"
+          onError={(e) => { e.target.src = defaultThumbnail }}
+        />
+      </div>
+      <div className="p-3">
+        <h3 className="font-medium text-gray-900 line-clamp-2 text-sm">
+          {video.title || "Unknown Title"}
+        </h3>
+        <p className="text-gray-600 text-xs mt-1">
+          {video.channel || "Unknown Channel"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [transcript, setTranscript] = useState("");
@@ -13,10 +41,13 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
+  const [recentVideos, setRecentVideos] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [activeSection, setActiveSection] = useState("summary");
+  const [isCached, setIsCached] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState(null);
 
-  // Check API status on load
+  // Check API status on load and load history
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
@@ -31,7 +62,11 @@ const Home = () => {
     const loadHistory = async () => {
       try {
         const response = await axios.get(`${API}/history`);
-        setHistory(response.data);
+        const historyData = response.data;
+        
+        // Set both full history and recent videos
+        setHistory(historyData);
+        setRecentVideos(historyData.slice(0, 6));
       } catch (e) {
         console.error("Error loading history:", e);
       }
@@ -53,6 +88,8 @@ const Home = () => {
     setError("");
     setTranscript("");
     setSummary("");
+    setIsCached(false);
+    setCurrentVideo(null);
     
     try {
       const response = await axios.post(`${API}/summarize`, {
@@ -61,10 +98,22 @@ const Home = () => {
       
       setTranscript(response.data.transcript);
       setSummary(response.data.summary);
+      setIsCached(response.data.is_cached);
+      
+      // Set current video data
+      setCurrentVideo({
+        title: response.data.title,
+        channel: response.data.channel,
+        thumbnail_url: response.data.thumbnail_url,
+        video_id: response.data.video_id,
+        url: response.data.url
+      });
       
       // Refresh history after new summary
       const historyResponse = await axios.get(`${API}/history`);
-      setHistory(historyResponse.data);
+      const historyData = historyResponse.data;
+      setHistory(historyData);
+      setRecentVideos(historyData.slice(0, 6));
       
     } catch (e) {
       console.error("Summarization error:", e);
@@ -79,10 +128,18 @@ const Home = () => {
     setTranscript(item.transcript);
     setSummary(item.summary);
     setShowHistory(false);
+    setIsCached(true);
+    setCurrentVideo({
+      title: item.title,
+      channel: item.channel,
+      thumbnail_url: item.thumbnail_url,
+      video_id: item.video_id,
+      url: item.url
+    });
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-gray-50 min-h-screen">
+    <div className="max-w-5xl mx-auto p-4 bg-gray-50 min-h-screen">
       <header className="text-center mb-8 pt-8">
         <h1 className="text-3xl font-bold text-indigo-700">🎬 YouTube Video Summarizer</h1>
         <p className="text-gray-600 mt-2">✨ Get a concise summary from any YouTube video transcript</p>
@@ -141,9 +198,28 @@ const Home = () => {
                     className="p-3 hover:bg-gray-50 cursor-pointer"
                     onClick={() => loadFromHistory(item)}
                   >
-                    <div className="line-clamp-1 text-indigo-600">🔗 {item.url}</div>
-                    <div className="line-clamp-1 text-sm text-gray-500">
-                      🕒 {new Date(item.timestamp).toLocaleString()}
+                    <div className="flex items-start">
+                      {item.thumbnail_url && (
+                        <img 
+                          src={item.thumbnail_url} 
+                          alt={item.title || "Video thumbnail"} 
+                          className="w-16 h-9 object-cover rounded mr-2 flex-shrink-0"
+                          onError={(e) => {e.target.src = "https://via.placeholder.com/160x90"}}
+                        />
+                      )}
+                      <div className="flex-grow">
+                        <div className="line-clamp-1 text-gray-900 font-medium">
+                          {item.title || item.url}
+                        </div>
+                        {item.channel && (
+                          <div className="line-clamp-1 text-xs text-gray-600 mt-1">
+                            {item.channel}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 mt-1">
+                          🕒 {new Date(item.timestamp).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -154,6 +230,30 @@ const Home = () => {
 
         {(summary || transcript) && (
           <div className="mt-6">
+            {currentVideo && currentVideo.title && (
+              <div className="flex items-start mb-4 bg-gray-50 p-3 rounded-md">
+                {currentVideo.thumbnail_url && (
+                  <img 
+                    src={currentVideo.thumbnail_url} 
+                    alt={currentVideo.title} 
+                    className="w-24 h-14 object-cover rounded mr-3 flex-shrink-0"
+                    onError={(e) => {e.target.src = "https://via.placeholder.com/240x140"}}
+                  />
+                )}
+                <div>
+                  <h2 className="font-medium text-gray-900">{currentVideo.title}</h2>
+                  {currentVideo.channel && (
+                    <p className="text-sm text-gray-600">{currentVideo.channel}</p>
+                  )}
+                  {isCached && (
+                    <span className="inline-block mt-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                      ⚡ Showing cached results
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="flex border-b border-gray-200 mb-4">
               <button
                 onClick={() => setActiveSection("summary")}
@@ -195,6 +295,22 @@ const Home = () => {
           </div>
         )}
       </div>
+      
+      {/* Recent Videos Section */}
+      {recentVideos.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold mb-4">🎞️ Recently Summarized Videos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            {recentVideos.map((video) => (
+              <VideoCard 
+                key={video.id} 
+                video={video} 
+                onClick={loadFromHistory} 
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
