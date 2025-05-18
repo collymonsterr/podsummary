@@ -101,7 +101,9 @@ async def get_transcript(video_id):
         )
     
     # Extract text from transcript segments and join with spaces
-    full_transcript = " ".join([segment.get('text', '') for segment in data['transcripts']])
+    # Process segments in order of start time to ensure proper sequence
+    segments = sorted(data['transcripts'], key=lambda x: x.get('start', 0))
+    full_transcript = " ".join([segment.get('text', '') for segment in segments])
     return full_transcript
 
 # Summarize text using OpenAI's API or a fallback method
