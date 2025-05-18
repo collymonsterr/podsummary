@@ -425,6 +425,32 @@ const Home = () => {
           </div>
         </div>
       )}
+
+      {/* Channel Search Section */}
+      <div className="mt-8 mb-10 border-t pt-6">
+        <h2 className="text-xl font-semibold mb-3">🎧 Summarize an Entire Channel</h2>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (channelUrl) {
+            navigate(`/channel?url=${encodeURIComponent(channelUrl)}`);
+          }
+        }} className="flex flex-col md:flex-row gap-4">
+          <input
+            type="text"
+            value={channelUrl}
+            onChange={(e) => setChannelUrl(e.target.value)}
+            placeholder="Paste YouTube channel URL (e.g., https://www.youtube.com/@channelname)"
+            className="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+          <button
+            type="submit"
+            className="px-6 py-3 rounded-md text-white font-medium bg-indigo-600 hover:bg-indigo-700"
+          >
+            📺 Get Channel Summaries
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
