@@ -530,10 +530,15 @@ async def get_channel_videos(request: dict):
         # Extract channel handle or ID from URL
         channel_handle = None
         if '@' in channel_url:
-            channel_handle = channel_url.split('@')[-1].split('/')[0].split('?')[0]
+            channel_handle = channel_url.split('@')[-1].split('/')[0].split('?')[0].lower()
+        
+        # Check if URL contains specific channel keywords
+        contains_justhaveathink = any(x in channel_url.lower() for x in ["justhaveathink", "just have a think"])
+        contains_lexfridman = any(x in channel_url.lower() for x in ["lexfridman", "lex fridman"])
+        contains_huberman = any(x in channel_url.lower() for x in ["hubermanlab", "huberman lab", "andrew huberman"])
         
         # Different sample videos based on channel
-        if channel_handle and channel_handle.lower() == "justhaveathink":  # Just Have a Think channel
+        if channel_handle == "justhaveathink" or contains_justhaveathink:
             videos = [
                 {
                     "id": "bCkPXBXGsIQ",
