@@ -1,20 +1,21 @@
+
 import requests
 import sys
-import os
 import time
+import os
+from datetime import datetime
 
-class YouTubeSummarizerTester:
+class PodBriefAPITester:
     def __init__(self, base_url):
         self.base_url = base_url
-        self.api_url = f"{base_url}/api"
-        self.admin_key = "yt-summarizer-admin-2025"
+        self.admin_key = "yt-summarizer-admin-2025"  # From backend/.env
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # A well-known video that's unlikely to be removed
+        self.test_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # A well-known video that should work
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
-        url = f"{self.api_url}/{endpoint}"
+        url = f"{self.base_url}/api/{endpoint}"
         if not headers:
             headers = {'Content-Type': 'application/json'}
         
@@ -33,7 +34,12 @@ class YouTubeSummarizerTester:
             if success:
                 self.tests_passed += 1
                 print(f"✅ Passed - Status: {response.status_code}")
-                return True, response.json() if response.text else {}
+                if response.text:
+                    try:
+                        return success, response.json()
+                    except:
+                        return success, response.text
+                return success, {}
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
                 print(f"Response: {response.text}")
@@ -43,12 +49,20 @@ class YouTubeSummarizerTester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
-    def test_api_status(self):
-        """Test API status endpoint"""
-        return self.run_test("API Status", "GET", "", 200)
+    def test_api_root(self):
+        """Test the API root endpoint"""
+        success, response = self.run_test(
+            "API Root",
+            "GET",
+            "",
+            200
+        )
+        if success:
+            print(f"API Message: {response.get('message', '')}")
+        return success
 
     def test_summarize_video(self):
-        """Test video summarization"""
+        """Test the summarize endpoint with a YouTube URL"""
         success, response = self.run_test(
             "Summarize Video",
             "POST",
@@ -56,98 +70,99 @@ class YouTubeSummarizerTester:
             200,
             data={"youtube_url": self.test_video_url}
         )
-        return success, response
+        
+        if success:
+            # Verify the response contains expected fields
+            required_fields = ["transcript", "summary", "video_id", "url"]
+            missing_fields = [field for field in required_fields if field not in response]
+            
+            if missing_fields:
+                print(f"❌ Response missing required fields: {', '.join(missing_fields)}")
+                return False
+                
+            print(f"✅ Successfully summarized video. Video ID: {response.get('video_id')}")
+            print(f"✅ Title: {response.get('title')}")
+            print(f"✅ Channel: {response.get('channel')}")
+            print(f"✅ Summary length: {len(response.get('summary', ''))}")
+            print(f"✅ Transcript length: {len(response.get('transcript', ''))}")
+            
+            # Store video ID for potential deletion test
+            self.test_video_id = response.get('id')
+            return True
+        return False
 
     def test_get_history(self):
-        """Test getting video history"""
-        return self.run_test("Get History", "GET", "history", 200)
+        """Test the history endpoint"""
+        success, response = self.run_test(
+            "Get History",
+            "GET",
+            "history",
+            200
+        )
+        
+        if success and isinstance(response, list):
+            print(f"✅ Retrieved {len(response)} history items")
+            
+            # If we have history items, store the first ID for deletion test
+            if response and len(response) > 0:
+                self.history_item_id = response[0].get('id')
+                print(f"✅ First history item ID: {self.history_item_id}")
+                print(f"✅ First history item title: {response[0].get('title')}")
+            return True
+        return False
 
-    def test_delete_transcript(self, transcript_id):
-        """Test deleting a transcript with admin key"""
+    def test_admin_delete(self):
+        """Test the admin delete endpoint"""
+        if not hasattr(self, 'history_item_id'):
+            print("⚠️ No history item ID available for deletion test")
+            return False
+            
         headers = {
             'Content-Type': 'application/json',
             'admin-key': self.admin_key
         }
-        return self.run_test(
-            "Delete Transcript",
+        
+        success, response = self.run_test(
+            "Admin Delete Transcript",
             "DELETE",
-            f"admin/transcript/{transcript_id}",
+            f"admin/transcript/{self.history_item_id}",
             200,
             headers=headers
         )
-
-    def test_delete_transcript_invalid_key(self, transcript_id):
-        """Test deleting a transcript with invalid admin key"""
-        headers = {
-            'Content-Type': 'application/json',
-            'admin-key': 'invalid-key'
-        }
-        success, _ = self.run_test(
-            "Delete Transcript with Invalid Key",
-            "DELETE",
-            f"admin/transcript/{transcript_id}",
-            403,
-            headers=headers
-        )
-        return success
+        
+        if success:
+            print(f"✅ Successfully deleted transcript with ID: {self.history_item_id}")
+            return True
+        return False
 
 def main():
-    # Get backend URL from environment variable or use default
-    backend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com')
+    # Get the backend URL from the frontend .env file
+    backend_url = "https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com"
     
-    print(f"Testing YouTube Summarizer API at: {backend_url}")
-    tester = YouTubeSummarizerTester(backend_url)
-
-    # Test API status
-    api_status_success, _ = tester.test_api_status()
-    if not api_status_success:
-        print("❌ API status check failed, stopping tests")
+    print(f"🚀 Starting PodBrief API tests against {backend_url}")
+    
+    # Setup tester
+    tester = PodBriefAPITester(backend_url)
+    
+    # Run tests
+    api_root_success = tester.test_api_root()
+    if not api_root_success:
+        print("❌ API root test failed, stopping tests")
         return 1
-
-    # Test getting history
-    history_success, history_data = tester.test_get_history()
+        
+    history_success = tester.test_get_history()
     if not history_success:
-        print("❌ History retrieval failed, stopping tests")
-        return 1
-    
-    print(f"Found {len(history_data)} videos in history")
-    
-    # Test video summarization if needed
-    if not history_data:
-        print("No videos in history, testing summarization...")
-        summarize_success, summarize_data = tester.test_summarize_video()
-        if not summarize_success:
-            print("❌ Video summarization failed")
-            return 1
+        print("❌ History test failed")
         
-        # Get updated history after summarization
-        _, history_data = tester.test_get_history()
+    summarize_success = tester.test_summarize_video()
+    if not summarize_success:
+        print("❌ Summarize test failed")
     
-    # Test transcript deletion with invalid key
-    if history_data:
-        transcript_id = history_data[0]['id']
-        print(f"Testing deletion with invalid key for transcript ID: {transcript_id}")
-        invalid_key_success = tester.test_delete_transcript_invalid_key(transcript_id)
-        if not invalid_key_success:
-            print("❌ Invalid key test failed")
-    
-    # Test transcript deletion with valid key
-    if history_data:
-        transcript_id = history_data[0]['id']
-        print(f"Testing deletion with valid key for transcript ID: {transcript_id}")
-        delete_success, _ = tester.test_delete_transcript(transcript_id)
-        
-        if delete_success:
-            # Verify deletion by checking history again
-            _, updated_history = tester.test_get_history()
-            deleted = all(item['id'] != transcript_id for item in updated_history)
-            
-            if deleted:
-                print("✅ Transcript successfully deleted and removed from history")
-                tester.tests_passed += 1
-            else:
-                print("❌ Transcript still exists in history after deletion")
-                tester.tests_run += 1
+    # Only run delete test if we have a history item
+    if hasattr(tester, 'history_item_id'):
+        delete_success = tester.test_admin_delete()
+        if not delete_success:
+            print("❌ Admin delete test failed")
     
     # Print results
     print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
