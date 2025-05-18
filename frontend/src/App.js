@@ -6,14 +6,28 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const VideoCard = ({ video, onClick }) => {
+const VideoCard = ({ video, onClick, onDelete, isAdmin }) => {
   const defaultThumbnail = "https://via.placeholder.com/320x180?text=No+Thumbnail";
+  
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    onDelete(video.id);
+  };
   
   return (
     <div 
-      className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer relative"
       onClick={() => onClick(video)}
     >
+      {isAdmin && (
+        <button 
+          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center z-10 hover:bg-red-600"
+          onClick={handleDelete}
+          title="Delete video"
+        >
+          ×
+        </button>
+      )}
       <div className="relative pb-[56.25%]">
         <img 
           src={video.thumbnail_url || defaultThumbnail} 
@@ -46,6 +60,17 @@ const Home = () => {
   const [activeSection, setActiveSection] = useState("summary");
   const [isCached, setIsCached] = useState(false);
   const [currentVideo, setCurrentVideo] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminKey, setAdminKey] = useState("");
+  
+  // Check if admin key is in localStorage on load
+  useEffect(() => {
+    const storedAdminKey = localStorage.getItem("adminKey");
+    if (storedAdminKey) {
+      setAdminKey(storedAdminKey);
+      setIsAdmin(true);
+    }
+  }, []);
 
   // Check API status on load and load history
   useEffect(() => {
@@ -137,12 +162,80 @@ const Home = () => {
       url: item.url
     });
   };
+  
+  const toggleAdminMode = () => {
+    if (isAdmin) {
+      // Log out of admin mode
+      setIsAdmin(false);
+      setAdminKey("");
+      localStorage.removeItem("adminKey");
+    } else {
+      // Prompt for admin key
+      const key = prompt("Enter admin key:");
+      if (key) {
+        setAdminKey(key);
+        setIsAdmin(true);
+        localStorage.setItem("adminKey", key);
+      }
+    }
+  };
+  
+  const handleDeleteVideo = async (videoId) => {
+    if (!isAdmin || !adminKey) {
+      alert("Admin privileges required to delete videos");
+      return;
+    }
+    
+    try {
+      const confirmed = window.confirm("Are you sure you want to delete this video?");
+      if (!confirmed) return;
+      
+      // Make API call to delete the video
+      await axios.delete(`${API}/admin/transcript/${videoId}`, {
+        headers: {
+          "admin-key": adminKey
+        }
+      });
+      
+      // Update both history lists after deletion
+      const historyResponse = await axios.get(`${API}/history`);
+      const historyData = historyResponse.data;
+      setHistory(historyData);
+      setRecentVideos(historyData.slice(0, 6));
+      
+      // Show success message
+      alert("Video deleted successfully");
+      
+      // If the deleted video is the current one, clear it
+      if (currentVideo && videoId === currentVideo.id) {
+        setTranscript("");
+        setSummary("");
+        setCurrentVideo(null);
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      alert(`Failed to delete video: ${error.response?.data?.detail || error.message}`);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-4 bg-gray-50 min-h-screen">
-      <header className="text-center mb-8 pt-8">
+      <header className="text-center mb-8 pt-8 relative">
         <h1 className="text-3xl font-bold text-indigo-700">🎬 YouTube Video Summarizer</h1>
         <p className="text-gray-600 mt-2">✨ Get a concise summary from any YouTube video transcript</p>
+        
+        {/* Admin button */}
+        <button 
+          onClick={toggleAdminMode}
+          className={`absolute top-0 right-4 text-sm px-3 py-1 rounded-md transition-colors ${
+            isAdmin 
+              ? "bg-red-500 text-white hover:bg-red-600" 
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+          title={isAdmin ? "Exit admin mode" : "Enter admin mode"}
+        >
+          {isAdmin ? "👑 Admin Mode" : "👤 Admin"}
+        </button>
       </header>
 
       <div className="bg-white shadow-md rounded-lg p-6 mb-8">
@@ -195,9 +288,21 @@ const Home = () => {
                 {history.map((item) => (
                   <div 
                     key={item.id} 
-                    className="p-3 hover:bg-gray-50 cursor-pointer"
+                    className="p-3 hover:bg-gray-50 cursor-pointer relative"
                     onClick={() => loadFromHistory(item)}
                   >
+                    {isAdmin && (
+                      <button 
+                        className="absolute top-3 right-3 bg-red-500 text-white p-1 rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteVideo(item.id);
+                        }}
+                        title="Delete video"
+                      >
+                        ×
+                      </button>
+                    )}
                     <div className="flex items-start">
                       {item.thumbnail_url && (
                         <img 
@@ -305,7 +410,9 @@ const Home = () => {
               <VideoCard 
                 key={video.id} 
                 video={video} 
-                onClick={loadFromHistory} 
+                onClick={loadFromHistory}
+                onDelete={handleDeleteVideo}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
