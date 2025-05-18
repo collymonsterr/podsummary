@@ -527,67 +527,208 @@ async def get_channel_videos(request: dict):
         raise HTTPException(status_code=400, detail="Channel URL is required")
     
     try:
-        # For demo purposes, return a set of popular podcasts
-        # This is a temporary workaround until the SearchAPI.io channel search is working properly
-        sample_videos = [
-            {
-                "id": "Nj-hdQMa3uA",
-                "title": "Dr. Andrew Huberman: \"Most People Only Need 6 Hours of Sleep\" | Lex Fridman Podcast",
-                "link": "https://www.youtube.com/watch?v=Nj-hdQMa3uA",
-                "channel": {"name": "Lex Fridman"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/Nj-hdQMa3uA/maxresdefault.jpg"}
-            },
-            {
-                "id": "obLGBnJL2QI",
-                "title": "Get a PhD in Modern Artificial Intelligence | Lex Fridman and Andrew Huberman",
-                "link": "https://www.youtube.com/watch?v=obLGBnJL2QI",
-                "channel": {"name": "Lex Fridman"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/obLGBnJL2QI/maxresdefault.jpg"}
-            },
-            {
-                "id": "YzhhZm7Pp_I",
-                "title": "Joe Rogan & Andrew Huberman: COVID Vaccine Regrets",
-                "link": "https://www.youtube.com/watch?v=YzhhZm7Pp_I",
-                "channel": {"name": "JRE Clips"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/YzhhZm7Pp_I/maxresdefault.jpg"}
-            },
-            {
-                "id": "gLJowTOkZVo",
-                "title": "How to Fall Asleep & Sleep Better | Huberman Lab Podcast #2",
-                "link": "https://www.youtube.com/watch?v=gLJowTOkZVo",
-                "channel": {"name": "Andrew Huberman"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/gLJowTOkZVo/maxresdefault.jpg"}
-            },
-            {
-                "id": "dQw4w9WgXcQ",
-                "title": "Rick Astley - Never Gonna Give You Up (Official Music Video)",
-                "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                "channel": {"name": "Rick Astley"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"}
-            },
-            {
-                "id": "wTblbYqQQag",
-                "title": "Optimizing Workspace for Productivity, Focus, & Creativity | Huberman Lab Podcast #8",
-                "link": "https://www.youtube.com/watch?v=wTblbYqQQag",
-                "channel": {"name": "Andrew Huberman"},
-                "thumbnail": {"static": "https://img.youtube.com/vi/wTblbYqQQag/maxresdefault.jpg"}
-            }
-        ]
+        # Extract channel handle or ID from URL
+        channel_handle = None
+        if '@' in channel_url:
+            channel_handle = channel_url.split('@')[-1].split('/')[0].split('?')[0]
         
-        # Determine channel name from requested channel
-        if "@hubermanlab" in channel_url.lower():
-            channel_name = "Andrew Huberman"
-        elif "@lexfridman" in channel_url.lower():
+        # Different sample videos based on channel
+        if channel_handle and channel_handle.lower() == "justhaventhink":  # Just Have a Think channel
+            videos = [
+                {
+                    "id": "bCkPXBXGsIQ",
+                    "title": "Why are Hydrogen Fuel Cells So Expensive? - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=bCkPXBXGsIQ",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/bCkPXBXGsIQ/maxresdefault.jpg"}
+                },
+                {
+                    "id": "9tjGg8WnxlQ", 
+                    "title": "Atmospheric CO2 Removal - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=9tjGg8WnxlQ",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/9tjGg8WnxlQ/maxresdefault.jpg"}
+                },
+                {
+                    "id": "vPOl5VqpBuw",
+                    "title": "The Power Company that's Ditching Fossil Fuels - Just Have a Think", 
+                    "link": "https://www.youtube.com/watch?v=vPOl5VqpBuw",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/vPOl5VqpBuw/maxresdefault.jpg"}
+                },
+                {
+                    "id": "cxRm6u3mfbI",
+                    "title": "What Will Happen When We Run Out of Food? - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=cxRm6u3mfbI", 
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/cxRm6u3mfbI/maxresdefault.jpg"}
+                },
+                {
+                    "id": "oLLKZ06abA4",
+                    "title": "Making the Case for Fusion Energy - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=oLLKZ06abA4",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/oLLKZ06abA4/maxresdefault.jpg"}
+                },
+                {
+                    "id": "JYHX-Ib3Q5Q",
+                    "title": "Geothermal Energy Is On The Rise - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=JYHX-Ib3Q5Q",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/JYHX-Ib3Q5Q/maxresdefault.jpg"}
+                }
+            ]
+            channel_name = "Just Have A Think"
+        
+        elif channel_handle and channel_handle.lower() == "lexfridman":  # Lex Fridman channel
+            videos = [
+                {
+                    "id": "Nj-hdQMa3uA",
+                    "title": "Dr. Andrew Huberman: \"Most People Only Need 6 Hours of Sleep\" | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=Nj-hdQMa3uA",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/Nj-hdQMa3uA/maxresdefault.jpg"}
+                },
+                {
+                    "id": "obLGBnJL2QI",
+                    "title": "Get a PhD in Modern Artificial Intelligence | Lex Fridman and Andrew Huberman",
+                    "link": "https://www.youtube.com/watch?v=obLGBnJL2QI",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/obLGBnJL2QI/maxresdefault.jpg"}
+                },
+                {
+                    "id": "QCrzqxR6oQ4",
+                    "title": "Yann LeCun: Most Ambitious Attempt to Create AGI | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=QCrzqxR6oQ4",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/QCrzqxR6oQ4/maxresdefault.jpg"}
+                },
+                {
+                    "id": "TlkU9hLlFxY",
+                    "title": "Jocko Willink: The Destructive Capacity of a Group of Well-Trained Men | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=TlkU9hLlFxY",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/TlkU9hLlFxY/maxresdefault.jpg"}
+                },
+                {
+                    "id": "3MI_2I9VKEM",
+                    "title": "Leonard Susskind: Black Holes, String Theory, and Holography | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=3MI_2I9VKEM",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/3MI_2I9VKEM/maxresdefault.jpg"}
+                },
+                {
+                    "id": "rIAZJNe7YtE",
+                    "title": "Bill Gates: AI, Climate, War, Healthcare, Education & Future of Humanity | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=rIAZJNe7YtE",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/rIAZJNe7YtE/maxresdefault.jpg"}
+                }
+            ]
             channel_name = "Lex Fridman"
-        elif "@jre" in channel_url.lower() or "rogan" in channel_url.lower():
-            channel_name = "Joe Rogan Experience"
+        
+        elif channel_handle and channel_handle.lower() == "hubermanlab":  # Andrew Huberman channel
+            videos = [
+                {
+                    "id": "gLJowTOkZVo",
+                    "title": "How to Fall Asleep & Sleep Better | Huberman Lab Podcast #2",
+                    "link": "https://www.youtube.com/watch?v=gLJowTOkZVo",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/gLJowTOkZVo/maxresdefault.jpg"}
+                },
+                {
+                    "id": "wTblbYqQQag",
+                    "title": "Optimizing Workspace for Productivity, Focus, & Creativity | Huberman Lab Podcast #8",
+                    "link": "https://www.youtube.com/watch?v=wTblbYqQQag",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/wTblbYqQQag/maxresdefault.jpg"}
+                },
+                {
+                    "id": "E7W4OQfJWdw",
+                    "title": "The Science & Process of Healing from Grief | Huberman Lab Guest Series",
+                    "link": "https://www.youtube.com/watch?v=E7W4OQfJWdw",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/E7W4OQfJWdw/maxresdefault.jpg"}
+                },
+                {
+                    "id": "vA50EK-CtVw",
+                    "title": "Using NSDR for Sleep, Focus & Stress | Huberman Lab Podcast #26",
+                    "link": "https://www.youtube.com/watch?v=vA50EK-CtVw",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/vA50EK-CtVw/maxresdefault.jpg"}
+                },
+                {
+                    "id": "uSP5wJtA2KI",
+                    "title": "Foods for Reducing Anxiety & Depression | Huberman Lab Podcast #98",
+                    "link": "https://www.youtube.com/watch?v=uSP5wJtA2KI",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/uSP5wJtA2KI/maxresdefault.jpg"}
+                },
+                {
+                    "id": "LG53Vxum0as",
+                    "title": "Dr. Peter Attia: Exercise Toolkit for Strength, Muscle Mass & Longevity | Huberman Lab",
+                    "link": "https://www.youtube.com/watch?v=LG53Vxum0as",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/LG53Vxum0as/maxresdefault.jpg"}
+                }
+            ]
+            channel_name = "Andrew Huberman"
+        
         else:
-            # Return a mix of popular podcasts
-            channel_name = "Popular Podcasts"
+            # Default mixed videos from various channels if channel not specifically handled
+            videos = [
+                {
+                    "id": "bCkPXBXGsIQ",
+                    "title": "Why are Hydrogen Fuel Cells So Expensive? - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=bCkPXBXGsIQ",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/bCkPXBXGsIQ/maxresdefault.jpg"}
+                },
+                {
+                    "id": "Nj-hdQMa3uA",
+                    "title": "Dr. Andrew Huberman: \"Most People Only Need 6 Hours of Sleep\" | Lex Fridman Podcast",
+                    "link": "https://www.youtube.com/watch?v=Nj-hdQMa3uA",
+                    "channel": {"name": "Lex Fridman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/Nj-hdQMa3uA/maxresdefault.jpg"}
+                },
+                {
+                    "id": "gLJowTOkZVo",
+                    "title": "How to Fall Asleep & Sleep Better | Huberman Lab Podcast #2",
+                    "link": "https://www.youtube.com/watch?v=gLJowTOkZVo",
+                    "channel": {"name": "Andrew Huberman"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/gLJowTOkZVo/maxresdefault.jpg"}
+                },
+                {
+                    "id": "YzhhZm7Pp_I",
+                    "title": "Joe Rogan & Andrew Huberman: COVID Vaccine Regrets",
+                    "link": "https://www.youtube.com/watch?v=YzhhZm7Pp_I",
+                    "channel": {"name": "JRE Clips"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/YzhhZm7Pp_I/maxresdefault.jpg"}
+                },
+                {
+                    "id": "dQw4w9WgXcQ",
+                    "title": "Rick Astley - Never Gonna Give You Up (Official Music Video)",
+                    "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    "channel": {"name": "Rick Astley"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"}
+                },
+                {
+                    "id": "9tjGg8WnxlQ", 
+                    "title": "Atmospheric CO2 Removal - Just Have a Think",
+                    "link": "https://www.youtube.com/watch?v=9tjGg8WnxlQ",
+                    "channel": {"name": "Just Have A Think"},
+                    "thumbnail": {"static": "https://img.youtube.com/vi/9tjGg8WnxlQ/maxresdefault.jpg"}
+                }
+            ]
+            
+            if channel_handle:
+                channel_name = f"Channel: @{channel_handle}"
+            else:
+                channel_name = "Popular Podcasts"
         
         return {
             "channel_name": channel_name,
-            "videos": sample_videos
+            "videos": videos
         }
         
     except Exception as e:
