@@ -131,17 +131,7 @@ async def summarize_text(text):
             logging.warning(f"OpenAI API error: {str(e)}. Using fallback summarization.")
             
             # Simple extractive summarization as fallback
-            # Split into sentences
-            from nltk.tokenize import sent_tokenize
-            
-            # Install nltk data if not already present
-            import nltk
-            try:
-                nltk.data.find('tokenizers/punkt')
-            except LookupError:
-                nltk.download('punkt')
-            
-            sentences = sent_tokenize(text)
+            sentences = text.split('. ')
             
             # If very short transcript, return as is
             if len(sentences) <= 5:
@@ -164,7 +154,7 @@ async def summarize_text(text):
             if sentences[-1] not in summary:
                 summary.append(sentences[-1])
             
-            return "Note: This is an extractive summary created without AI due to API limits.\n\n" + " ".join(summary)
+            return "Note: This is an extractive summary created without AI due to API limits.\n\n" + ". ".join(summary)
     
     except Exception as e:
         logging.error(f"Error in summarizing text: {str(e)}")
