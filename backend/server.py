@@ -245,23 +245,26 @@ async def summarize_youtube_video(request: VideoRequest):
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
-        # Check if we already have this video's transcript in our database
-        existing = await db.transcripts.find_one({"video_id": video_id})
+        # Get transcript - either from cache or from YouTube API
         transcript = ""
+        existing = await db.transcripts.find_one({"video_id": video_id})
         
         if existing and "transcript" in existing and existing["transcript"]:
-            # Use the cached transcript
+            # Use the cached transcript to avoid unnecessary API calls
             transcript = existing["transcript"]
+            logging.info(f"Using cached transcript for video ID: {video_id}")
         else:
             # Get transcript from YouTube
             try:
                 transcript = await get_transcript(video_id)
+                logging.info(f"Retrieved new transcript for video ID: {video_id}")
             except Exception as e:
                 logging.error(f"Error getting transcript: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
         
-        # Always generate a new summary (not using cached summary)
+        # Always generate a new summary with the current prompt
         summary = await summarize_text(transcript)
+        logging.info(f"Generated new summary for video ID: {video_id}")
         
         # Store or update in database
         if existing:
