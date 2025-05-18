@@ -134,22 +134,25 @@ async def get_transcript(video_id):
 # Summarize text using OpenAI's API or a fallback method
 async def summarize_text(text):
     try:
-        # First try OpenAI API
-        max_tokens = 8000  # Reduced context size for gpt-3.5-turbo
-        if len(text) > max_tokens * 4:  # Approximate character count
-            text = text[:max_tokens * 4]  # Truncate to fit within context window
+        # If transcript is very long, truncate it to avoid excessive token usage
+        max_chars = 16000  # Approximate char count that fits in context
+        if len(text) > max_chars:
+            logging.info(f"Truncating transcript from {len(text)} to {max_chars} characters")
+            text = text[:max_chars]
             
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo",  # Most cost-effective model
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that creates clear, concise summaries of YouTube video transcripts."},
                 {"role": "user", "content": f"Summarise this video transcript clearly and concisely. List the main topics discussed in the order they appear, and highlight the most interesting or surprising insights. Write it so someone can quickly decide if it's worth watching the full video.\n\nTranscript:\n{text}"}
             ],
             temperature=0.5,
-            max_tokens=1000
+            max_tokens=500  # Reduced from 1000 to save on tokens
         )
         
-        return response.choices[0].message.content
+        summary = response.choices[0].message.content
+        logging.info(f"Successfully generated OpenAI summary of length {len(summary)}")
+        return summary
     except Exception as openai_error:
         logging.error(f"OpenAI API error: {str(openai_error)}")
         
