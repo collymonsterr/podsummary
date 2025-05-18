@@ -223,7 +223,7 @@ def main():
     print("\n" + "=" * 60)
     print("Testing History Feature")
     print("=" * 60)
-    history_success = tester.test_history()
+    history_success, history_data = tester.test_history()
     
     # Test 4: Summarize multiple videos to populate recent videos
     print("\n" + "=" * 60)
@@ -235,6 +235,28 @@ def main():
         success, _, _ = tester.test_summarize_video(video_url)
         if not success:
             print(f"❌ Failed to summarize video {i+1}")
+    
+    # Test 5: Admin functionality
+    print("\n" + "=" * 60)
+    print("Testing Admin Functionality")
+    print("=" * 60)
+    
+    # Get the first video ID for deletion tests
+    if history_success and history_data and len(history_data) > 0:
+        transcript_id = history_data[0]['id']
+        print(f"Using transcript ID for testing: {transcript_id}")
+        
+        # Test deletion without admin key
+        tester.test_delete_transcript_without_admin_key(transcript_id)
+        
+        # Test deletion with invalid admin key
+        tester.test_delete_transcript_with_invalid_admin_key(transcript_id)
+        
+        # Test deletion with valid admin key
+        # Note: This will actually delete the transcript, so it's the last test
+        tester.test_delete_transcript_with_valid_admin_key(transcript_id)
+    else:
+        print("⚠️ No videos in history to test admin deletion functionality")
     
     # Print results
     print("\n" + "=" * 60)
