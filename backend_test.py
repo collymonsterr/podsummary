@@ -196,8 +196,8 @@ def main():
     
     # Test each video type
     music_video_success, _ = tester.test_valid_youtube_url(tester.music_video_url, "Music")
-    educational_video_success, _ = tester.test_valid_youtube_url(tester.educational_video_url, "Educational")
-    short_video_success, _ = tester.test_valid_youtube_url(tester.short_video_url, "Short")
+    comedy_sketch_success, _ = tester.test_valid_youtube_url(tester.comedy_sketch_url, "Comedy Sketch")
+    ted_talk_success, _ = tester.test_valid_youtube_url(tester.ted_talk_url, "TED Talk")
     
     # Test history
     history_success, _ = tester.test_get_history()
