@@ -130,6 +130,37 @@ class YouTubeSummarizerTester:
         print(f"✅ Speed improvement: {(time1-time2)/time1*100:.1f}%")
         return True
 
+    def test_history(self):
+        """Test history endpoint"""
+        success, response = self.run_test("Get History", "GET", "history", 200)
+        
+        if success:
+            print(f"Number of history items: {len(response)}")
+            
+            if len(response) > 0:
+                # Check first item has required fields
+                first_item = response[0]
+                required_fields = ['id', 'video_id', 'url', 'transcript', 'summary', 'timestamp']
+                missing_fields = [field for field in required_fields if field not in first_item]
+                
+                if missing_fields:
+                    print(f"❌ History item missing required fields: {', '.join(missing_fields)}")
+                    return False
+                    
+                # Check for metadata fields
+                metadata_fields = ['title', 'channel', 'thumbnail_url']
+                has_metadata = all(field in first_item for field in metadata_fields)
+                
+                if not has_metadata:
+                    print("⚠️ History item missing some metadata fields")
+                
+                return True
+            else:
+                print("⚠️ History is empty, cannot fully validate")
+                return True
+        
+        return False
+
     def test_delete_transcript_with_valid_admin_key(self, transcript_id):
         """Test deleting a transcript with valid admin key"""
         headers = {
