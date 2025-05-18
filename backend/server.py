@@ -91,26 +91,44 @@ async def get_transcript(video_id):
         "lang": "en"
     }
     
+    logging.info(f"Requesting transcript for video ID: {video_id}")
     response = requests.get(url, params=params)
     
     if response.status_code != 200:
+        error_msg = f"Failed to get transcript: {response.text}"
+        logging.error(error_msg)
         raise HTTPException(
             status_code=response.status_code,
-            detail=f"Failed to get transcript: {response.text}"
+            detail=error_msg
         )
         
     data = response.json()
     
     if 'transcripts' not in data or not data['transcripts']:
+        error_msg = "No transcript found for this video"
+        logging.error(f"{error_msg} (video ID: {video_id})")
         raise HTTPException(
             status_code=400,
-            detail="No transcript found for this video"
+            detail=error_msg
         )
     
     # Extract text from transcript segments and join with spaces
     # Process segments in order of start time to ensure proper sequence
     segments = sorted(data['transcripts'], key=lambda x: x.get('start', 0))
-    full_transcript = " ".join([segment.get('text', '') for segment in segments])
+    
+    # Extract the text and clean it
+    transcript_parts = []
+    for segment in segments:
+        text = segment.get('text', '').strip()
+        if text:
+            transcript_parts.append(text)
+    
+    # Join all parts with spaces
+    full_transcript = " ".join(transcript_parts)
+    
+    # Log the length of the transcript for debugging
+    logging.info(f"Retrieved transcript with {len(full_transcript)} characters and {len(segments)} segments")
+    
     return full_transcript
 
 # Summarize text using OpenAI's API or a fallback method
