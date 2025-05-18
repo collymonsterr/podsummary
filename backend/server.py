@@ -92,16 +92,16 @@ async def get_transcript(video_id):
             detail=f"Failed to get transcript: {response.text}"
         )
         
-    transcript_data = response.json()
+    data = response.json()
     
-    if 'transcript' not in transcript_data:
+    if 'transcripts' not in data or not data['transcripts']:
         raise HTTPException(
             status_code=400,
             detail="No transcript found for this video"
         )
     
     # Extract text from transcript segments and join with spaces
-    full_transcript = " ".join([segment.get('text', '') for segment in transcript_data['transcript']])
+    full_transcript = " ".join([segment.get('text', '') for segment in data['transcripts']])
     return full_transcript
 
 # Summarize text using OpenAI's API
