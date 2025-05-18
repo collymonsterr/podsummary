@@ -533,7 +533,7 @@ async def get_channel_videos(request: dict):
             channel_handle = channel_url.split('@')[-1].split('/')[0].split('?')[0]
         
         # Different sample videos based on channel
-        if channel_handle and channel_handle.lower() == "justhaventhink":  # Just Have a Think channel
+        if channel_handle and channel_handle.lower() == "justhaveathink":  # Just Have a Think channel
             videos = [
                 {
                     "id": "bCkPXBXGsIQ",
