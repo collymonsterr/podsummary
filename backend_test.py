@@ -80,16 +80,16 @@ class YouTubeSummarizerTester:
             data={"youtube_url": self.invalid_video_url}
         )
 
-    def test_valid_youtube_url(self):
+    def test_valid_youtube_url(self, video_url, video_type):
         """Test summarizing a valid YouTube URL"""
-        logger.info("\n⏳ Testing video summarization (this may take a minute)...")
+        logger.info(f"\n⏳ Testing {video_type} video summarization (this may take a minute)...")
         
         success, response = self.run_test(
-            "Summarize Valid YouTube URL",
+            f"Summarize {video_type} Video",
             "POST",
             "summarize",
             200,
-            data={"youtube_url": self.test_video_url}
+            data={"youtube_url": video_url}
         )
         
         if success:
@@ -116,12 +116,12 @@ class YouTubeSummarizerTester:
                     success = False
                 
                 # Extract video ID from URL
-                parsed_url = urlparse(self.test_video_url)
+                parsed_url = urlparse(video_url)
                 video_id = parse_qs(parsed_url.query).get('v', [''])[0]
                 
                 if video_id:
                     logger.info(f"✅ Valid video ID: {video_id}")
-                    logger.info(f"✅ Valid URL: {self.test_video_url}")
+                    logger.info(f"✅ Valid URL: {video_url}")
                 else:
                     logger.error("❌ Could not extract video ID from URL")
                     success = False
@@ -139,6 +139,15 @@ class YouTubeSummarizerTester:
                         logger.warning("⚠️ Summary is not shorter than transcript")
                         logger.info(f"📏 Transcript length: {transcript_length} characters")
                         logger.info(f"📏 Summary length: {summary_length} characters")
+                
+                # Print a sample of the transcript and summary for verification
+                if has_transcript:
+                    transcript_sample = data['transcript'][:200] + "..." if len(data['transcript']) > 200 else data['transcript']
+                    logger.info(f"📝 Transcript sample: {transcript_sample}")
+                
+                if has_summary:
+                    summary_sample = data['summary'][:200] + "..." if len(data['summary']) > 200 else data['summary']
+                    logger.info(f"📝 Summary sample: {summary_sample}")
                 
             except Exception as e:
                 logger.error(f"❌ Error validating response: {str(e)}")
