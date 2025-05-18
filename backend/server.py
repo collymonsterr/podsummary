@@ -117,7 +117,7 @@ async def get_transcript(video_id):
 async def summarize_text(text):
     try:
         # If transcript is very long, truncate it to avoid token limits
-        max_tokens = 16000  # Maximum context for newer models
+        max_tokens = 8000  # Reduced context size for gpt-3.5-turbo
         if len(text) > max_tokens * 4:  # Approximate character count
             text = text[:max_tokens * 4]  # Truncate to fit within context window
             
@@ -133,12 +133,20 @@ async def summarize_text(text):
         
         return response.choices[0].message.content
     except Exception as e:
-        logging.error(f"Error in summarizing text: {str(e)}")
+        logging.error(f"Error in summarizing text with OpenAI: {str(e)}")
         
         # Fallback to extractive summarization
         try:
-            # Simple extractive summarization as fallback
-            sentences = text.split('. ')
+            # Use NLTK for better sentence tokenization
+            from nltk.tokenize import sent_tokenize
+            
+            # Tokenize text into sentences
+            try:
+                sentences = sent_tokenize(text)
+            except Exception as nltk_error:
+                logging.error(f"NLTK tokenization error: {str(nltk_error)}")
+                # If NLTK fails, use simple split by period
+                sentences = text.split('. ')
             
             # If very short transcript, return as is
             if len(sentences) <= 5:
@@ -161,7 +169,14 @@ async def summarize_text(text):
             if sentences[-1] not in summary:
                 summary.append(sentences[-1])
             
-            return "Note: This is an extractive summary created due to API limits.\n\n" + ". ".join(summary) + "."
+            # Join sentences properly, adding period if missing
+            formatted_summary = []
+            for sentence in summary:
+                if sentence and not sentence.endswith(('.', '!', '?', '"', '♪')):
+                    sentence += '.'
+                formatted_summary.append(sentence)
+            
+            return "Note: This is an extractive summary created as a fallback.\n\n" + " ".join(formatted_summary)
         except Exception as summarization_error:
             logging.error(f"Fallback summarization error: {str(summarization_error)}")
             return "Error generating summary. The transcript was processed but could not be summarized. You can view the full transcript in the Transcript tab."
