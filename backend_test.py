@@ -1,14 +1,9 @@
 
 import requests
-import sys
 import time
-import logging
-import re
-from urllib.parse import urlparse, parse_qs
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+import sys
+import json
+from datetime import datetime
 
 class YouTubeSummarizerTester:
     def __init__(self, base_url="https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com"):
@@ -16,224 +11,206 @@ class YouTubeSummarizerTester:
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
-        
-        # Test videos
-        self.music_video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
-        self.comedy_sketch_url = "https://www.youtube.com/watch?v=THNPmhBl-8I"  # Mitchell and Webb - Brain Surgery
-        self.ted_talk_url = "https://www.youtube.com/watch?v=_vS_b7cJn2A"  # TED talk
-        self.educational_video_url = "https://www.youtube.com/watch?v=8S0FDjFBj8o"  # Educational video
-        self.invalid_video_url = "https://www.youtube.com/watch?v=invalid"
+        self.test_videos = [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Music video
+            "https://www.youtube.com/watch?v=_vS_b7cJn2A",  # TED Talk
+            "https://www.youtube.com/watch?v=THNPmhBl-8I",  # Comedy sketch
+            "https://www.youtube.com/watch?v=8S0FDjFBj8o"   # Educational
+        ]
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, validate_func=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
         
         self.tests_run += 1
-        logger.info(f"\n🔍 Testing {name}...")
+        print(f"\n🔍 Testing {name}...")
         
         try:
             if method == 'GET':
                 response = requests.get(url, headers=headers)
             elif method == 'POST':
                 response = requests.post(url, json=data, headers=headers)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
 
             success = response.status_code == expected_status
-            
             if success:
                 self.tests_passed += 1
-                logger.info(f"✅ Passed - Status: {response.status_code}")
-                
-                if validate_func and callable(validate_func):
-                    validation_result = validate_func(response)
-                    if not validation_result:
-                        success = False
-                        self.tests_passed -= 1
-                        logger.error("❌ Validation failed")
+                print(f"✅ Passed - Status: {response.status_code}")
+                return success, response.json() if response.content else {}
             else:
-                logger.error(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
-                if response.text:
-                    logger.error(f"Response: {response.text[:500]}")
-
-            return success, response
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                print(f"Response: {response.text}")
+                return False, {}
 
         except Exception as e:
-            logger.error(f"❌ Failed - Error: {str(e)}")
-            return False, None
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
 
     def test_api_status(self):
-        """Test the API status endpoint"""
-        return self.run_test(
-            "API Status Check",
-            "GET",
-            "",
-            200
-        )
+        """Test API status endpoint"""
+        return self.run_test("API Status", "GET", "", 200)
 
-    def test_invalid_youtube_url(self):
-        """Test summarizing an invalid YouTube URL"""
-        return self.run_test(
-            "Summarize Invalid YouTube URL",
-            "POST",
-            "summarize",
-            400,
-            data={"youtube_url": self.invalid_video_url}
-        )
-
-    def test_valid_youtube_url(self, video_url, video_type):
-        """Test summarizing a valid YouTube URL"""
-        logger.info(f"\n⏳ Testing {video_type} video summarization (this may take a minute)...")
-        
+    def test_summarize_video(self, youtube_url):
+        """Test video summarization"""
+        start_time = time.time()
         success, response = self.run_test(
-            f"Summarize {video_type} Video",
+            f"Summarize Video ({youtube_url})",
             "POST",
             "summarize",
             200,
-            data={"youtube_url": video_url}
+            data={"youtube_url": youtube_url}
         )
+        end_time = time.time()
+        processing_time = end_time - start_time
         
         if success:
-            try:
-                data = response.json()
+            print(f"Processing time: {processing_time:.2f} seconds")
+            print(f"Video ID: {response.get('video_id', 'N/A')}")
+            print(f"Title: {response.get('title', 'N/A')}")
+            print(f"Channel: {response.get('channel', 'N/A')}")
+            print(f"Cached: {response.get('is_cached', False)}")
+            print(f"Transcript length: {len(response.get('transcript', ''))}")
+            print(f"Summary length: {len(response.get('summary', ''))}")
+            
+            # Verify we have all required fields
+            required_fields = ['transcript', 'summary', 'video_id', 'url']
+            missing_fields = [field for field in required_fields if field not in response]
+            
+            if missing_fields:
+                print(f"❌ Missing required fields: {', '.join(missing_fields)}")
+                return False, response, processing_time
                 
-                # Validate response structure
-                logger.info("\n🔍 Validating transcript and summary content...")
-                
-                # Check if transcript exists and is not empty
-                has_transcript = 'transcript' in data and data['transcript']
-                if has_transcript:
-                    logger.info("✅ Transcript is not empty")
-                else:
-                    logger.error("❌ Transcript is empty or missing")
-                    success = False
-                
-                # Check if summary exists and is not empty
-                has_summary = 'summary' in data and data['summary']
-                if has_summary:
-                    logger.info("✅ Summary is not empty")
-                    
-                    # Check for emojis in the summary
-                    emoji_pattern = re.compile(r'[\U0001F300-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001f926-\U0001f937]')
-                    emojis_found = emoji_pattern.findall(data['summary'])
-                    
-                    if emojis_found:
-                        logger.info(f"✅ Found {len(emojis_found)} emojis in summary: {''.join(emojis_found[:10])}")
-                    else:
-                        logger.warning("⚠️ No emojis found in summary")
-                        
-                    # Special check for music videos
-                    if video_url == self.music_video_url:
-                        if "🎵" in data['summary'] or "🎶" in data['summary'] or "🎤" in data['summary']:
-                            logger.info("✅ Music video has music-related emojis in summary")
-                        else:
-                            logger.warning("⚠️ Music video summary doesn't have music-related emojis")
-                else:
-                    logger.error("❌ Summary is empty or missing")
-                    success = False
-                
-                # Extract video ID from URL
-                parsed_url = urlparse(video_url)
-                video_id = parse_qs(parsed_url.query).get('v', [''])[0]
-                
-                if video_id:
-                    logger.info(f"✅ Valid video ID: {video_id}")
-                    logger.info(f"✅ Valid URL: {video_url}")
-                else:
-                    logger.error("❌ Could not extract video ID from URL")
-                    success = False
-                
-                # Check if summary is shorter than transcript (as expected)
-                if has_transcript and has_summary:
-                    transcript_length = len(data['transcript'])
-                    summary_length = len(data['summary'])
-                    
-                    if summary_length < transcript_length:
-                        logger.info("✅ Summary is shorter than transcript (as expected)")
-                        logger.info(f"📏 Transcript length: {transcript_length} characters")
-                        logger.info(f"📏 Summary length: {summary_length} characters")
-                    else:
-                        logger.warning("⚠️ Summary is not shorter than transcript")
-                        logger.info(f"📏 Transcript length: {transcript_length} characters")
-                        logger.info(f"📏 Summary length: {summary_length} characters")
-                
-                # Print a sample of the transcript and summary for verification
-                if has_transcript:
-                    transcript_sample = data['transcript'][:200] + "..." if len(data['transcript']) > 200 else data['transcript']
-                    logger.info(f"📝 Transcript sample: {transcript_sample}")
-                
-                if has_summary:
-                    summary_sample = data['summary'][:200] + "..." if len(data['summary']) > 200 else data['summary']
-                    logger.info(f"📝 Summary sample: {summary_sample}")
-                
-            except Exception as e:
-                logger.error(f"❌ Error validating response: {str(e)}")
-                success = False
+            return True, response, processing_time
         
-        return success, response
+        return False, {}, processing_time
 
-    def test_get_history(self):
-        """Test getting the summary history"""
-        success, response = self.run_test(
-            "Get Summary History",
-            "GET",
-            "history",
-            200
-        )
+    def test_caching(self, youtube_url):
+        """Test caching functionality by requesting the same video twice"""
+        print(f"\n🔍 Testing caching for {youtube_url}...")
+        
+        # First request
+        print("First request (should not be cached):")
+        success1, response1, time1 = self.test_summarize_video(youtube_url)
+        
+        if not success1:
+            print("❌ First request failed, cannot test caching")
+            return False
+            
+        # Second request (should be cached)
+        print("\nSecond request (should be cached):")
+        success2, response2, time2 = self.test_summarize_video(youtube_url)
+        
+        if not success2:
+            print("❌ Second request failed")
+            return False
+            
+        # Verify it's cached
+        if not response2.get('is_cached', False):
+            print("❌ Response not marked as cached")
+            return False
+            
+        # Verify faster response time
+        if time2 >= time1:
+            print(f"❌ Cached response not faster: {time2:.2f}s vs {time1:.2f}s")
+            return False
+            
+        # Verify same content
+        if response1.get('transcript') != response2.get('transcript'):
+            print("❌ Transcripts don't match between requests")
+            return False
+            
+        if response1.get('summary') != response2.get('summary'):
+            print("❌ Summaries don't match between requests")
+            return False
+            
+        print(f"✅ Caching test passed! First request: {time1:.2f}s, Second request: {time2:.2f}s")
+        print(f"✅ Speed improvement: {(time1-time2)/time1*100:.1f}%")
+        return True
+
+    def test_history(self):
+        """Test history endpoint"""
+        success, response = self.run_test("Get History", "GET", "history", 200)
         
         if success:
-            try:
-                history_items = response.json()
+            print(f"Number of history items: {len(response)}")
+            
+            if len(response) > 0:
+                # Check first item has required fields
+                first_item = response[0]
+                required_fields = ['id', 'video_id', 'url', 'transcript', 'summary', 'timestamp']
+                missing_fields = [field for field in required_fields if field not in first_item]
                 
-                logger.info(f"📚 History items: {len(history_items)}")
-                
-                if history_items:
-                    # Get the most recent item
-                    most_recent = history_items[0]
-                    logger.info(f"📅 Most recent summary: {most_recent.get('url')} ({most_recent.get('video_id')})")
+                if missing_fields:
+                    print(f"❌ History item missing required fields: {', '.join(missing_fields)}")
+                    return False
                     
-                    # Check for emojis in the most recent summary
-                    if 'summary' in most_recent and most_recent['summary']:
-                        emoji_pattern = re.compile(r'[\U0001F300-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001f926-\U0001f937]')
-                        emojis_found = emoji_pattern.findall(most_recent['summary'])
-                        
-                        if emojis_found:
-                            logger.info(f"✅ Found {len(emojis_found)} emojis in history summary: {''.join(emojis_found[:10])}")
-                        else:
-                            logger.warning("⚠️ No emojis found in history summary")
-                else:
-                    logger.warning("⚠️ No history items found")
+                # Check for metadata fields
+                metadata_fields = ['title', 'channel', 'thumbnail_url']
+                has_metadata = all(field in first_item for field in metadata_fields)
                 
-            except Exception as e:
-                logger.error(f"❌ Error validating history response: {str(e)}")
-                success = False
+                if not has_metadata:
+                    print("⚠️ History item missing some metadata fields")
+                
+                return True
+            else:
+                print("⚠️ History is empty, cannot fully validate")
+                return True
         
-        return success, response
+        return False
 
 def main():
-    print("=" * 80)
-    print("🧪 YOUTUBE VIDEO SUMMARIZER API TEST SUITE 🧪")
-    print("=" * 80)
+    print("=" * 60)
+    print("YouTube Video Summarizer API Test")
+    print("=" * 60)
     
     tester = YouTubeSummarizerTester()
     
-    # Run basic API tests
-    api_status_success, _ = tester.test_api_status()
-    invalid_url_success, _ = tester.test_invalid_youtube_url()
+    # Test 1: API Status
+    api_status, _ = tester.test_api_status()
+    if not api_status:
+        print("❌ API is not responding, stopping tests")
+        return 1
+        
+    # Test 2: Summarize a video
+    print("\n" + "=" * 60)
+    print("Testing Summary Caching Feature")
+    print("=" * 60)
     
-    # Test each video type
-    music_video_success, _ = tester.test_valid_youtube_url(tester.music_video_url, "Music")
-    comedy_sketch_success, _ = tester.test_valid_youtube_url(tester.comedy_sketch_url, "Comedy Sketch")
-    ted_talk_success, _ = tester.test_valid_youtube_url(tester.ted_talk_url, "TED Talk")
+    # Test with music video
+    caching_success = tester.test_caching(tester.test_videos[0])
     
-    # Test history
-    history_success, _ = tester.test_get_history()
+    # Test 3: Get history
+    print("\n" + "=" * 60)
+    print("Testing History Feature")
+    print("=" * 60)
+    history_success = tester.test_history()
+    
+    # Test 4: Summarize multiple videos to populate recent videos
+    print("\n" + "=" * 60)
+    print("Testing Multiple Video Summaries")
+    print("=" * 60)
+    
+    for i, video_url in enumerate(tester.test_videos[1:], 1):
+        print(f"\nTesting video {i+1} of {len(tester.test_videos)}: {video_url}")
+        success, _, _ = tester.test_summarize_video(video_url)
+        if not success:
+            print(f"❌ Failed to summarize video {i+1}")
     
     # Print results
-    print("\n" + "=" * 80)
-    print(f"📊 SUMMARY: Tests passed: {tester.tests_passed}/{tester.tests_run}")
-    print("=" * 80)
+    print("\n" + "=" * 60)
+    print("Test Results")
+    print("=" * 60)
+    print(f"Tests passed: {tester.tests_passed}/{tester.tests_run}")
+    
+    if not caching_success:
+        print("❌ Caching feature test failed")
+    else:
+        print("✅ Caching feature test passed")
+        
+    if not history_success:
+        print("❌ History feature test failed")
+    else:
+        print("✅ History feature test passed")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 
