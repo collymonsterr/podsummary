@@ -112,6 +112,22 @@ class YouTubeSummarizerTester:
                 has_summary = 'summary' in data and data['summary']
                 if has_summary:
                     logger.info("✅ Summary is not empty")
+                    
+                    # Check for emojis in the summary
+                    emoji_pattern = re.compile(r'[\U0001F300-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001f926-\U0001f937]')
+                    emojis_found = emoji_pattern.findall(data['summary'])
+                    
+                    if emojis_found:
+                        logger.info(f"✅ Found {len(emojis_found)} emojis in summary: {''.join(emojis_found[:10])}")
+                    else:
+                        logger.warning("⚠️ No emojis found in summary")
+                        
+                    # Special check for music videos
+                    if video_url == self.music_video_url:
+                        if "🎵" in data['summary'] or "🎶" in data['summary'] or "🎤" in data['summary']:
+                            logger.info("✅ Music video has music-related emojis in summary")
+                        else:
+                            logger.warning("⚠️ Music video summary doesn't have music-related emojis")
                 else:
                     logger.error("❌ Summary is empty or missing")
                     success = False
