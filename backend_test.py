@@ -192,6 +192,10 @@ def main():
     history_success = tester.test_get_history()
     if not history_success:
         print("❌ History test failed")
+    
+    channel_success = tester.test_channel_videos()
+    if not channel_success:
+        print("❌ Channel videos test failed")
         
     summarize_success = tester.test_summarize_video()
     if not summarize_success:
