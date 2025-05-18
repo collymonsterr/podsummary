@@ -199,46 +199,50 @@ async def summarize_youtube_video(request: VideoRequest):
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
-        # Check if we already have this video in our database
+        # Check if we already have this video's transcript in our database
         existing = await db.transcripts.find_one({"video_id": video_id})
-        if existing:
-            return TranscriptResponse(
-                transcript=existing["transcript"],
-                summary=existing["summary"],
-                video_id=existing["video_id"],
-                url=existing["url"]
-            )
+        transcript = ""
         
-        try:
+        if existing and "transcript" in existing and existing["transcript"]:
+            # Use the cached transcript
+            transcript = existing["transcript"]
+        else:
             # Get transcript from YouTube
-            transcript = await get_transcript(video_id)
-            
-            # Generate summary using OpenAI
-            summary = await summarize_text(transcript)
-            
-            # Store in database
+            try:
+                transcript = await get_transcript(video_id)
+            except Exception as e:
+                logging.error(f"Error getting transcript: {str(e)}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        # Always generate a new summary (not using cached summary)
+        summary = await summarize_text(transcript)
+        
+        # Store or update in database
+        if existing:
+            # Update the existing record with the new summary
+            await db.transcripts.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "summary": summary,
+                    "timestamp": datetime.utcnow()
+                }}
+            )
+        else:
+            # Create a new record
             transcript_obj = StoredTranscript(
                 video_id=video_id,
                 url=request.youtube_url,
                 transcript=transcript,
                 summary=summary
             )
-            
             await db.transcripts.insert_one(transcript_obj.dict())
-            
-            return TranscriptResponse(
-                transcript=transcript,
-                summary=summary,
-                video_id=video_id,
-                url=request.youtube_url
-            )
-        except HTTPException as e:
-            # Re-raise HTTP exceptions with their status codes
-            raise e
-        except Exception as e:
-            # Log the error and return a 500 status
-            logging.error(f"Error processing valid YouTube URL: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+        
+        return TranscriptResponse(
+            transcript=transcript,
+            summary=summary,
+            video_id=video_id,
+            url=request.youtube_url
+        )
             
     except HTTPException:
         # Re-raise HTTP exceptions
