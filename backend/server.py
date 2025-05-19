@@ -581,7 +581,16 @@ async def get_channel_videos(request: dict):
                                 detail=f"SearchAPI.io error: {response.text}")
         
         data = response.json()
-        logging.info(f"SearchAPI.io Data: {json.dumps(data)[:500]}...")
+        logging.info(f"SearchAPI.io Data keys: {list(data.keys())}")
+        
+        # Print information about each key to understand the structure
+        for key in data.keys():
+            if isinstance(data[key], list) and data[key]:
+                logging.info(f"Key: {key}, Type: list with {len(data[key])} items")
+            elif isinstance(data[key], dict):
+                logging.info(f"Key: {key}, Type: dict with keys {list(data[key].keys())}")
+            else:
+                logging.info(f"Key: {key}, Type: {type(data[key])}")
         
         # Check if we found channel results
         if "channel_results" in data and data["channel_results"]:
