@@ -10,7 +10,10 @@ from typing import List, Optional
 import uuid
 from datetime import datetime
 import requests
-import openai
+try:
+    import openai
+except ImportError:
+    logging.warning("OpenAI module not found. Summaries will not be available.")
 import re
 import nltk
 
