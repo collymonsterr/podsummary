@@ -593,10 +593,30 @@ async def get_channel_videos(request: dict):
                 logging.info(f"Key: {key}, Type: {type(data[key])}")
         
         # Check if we found channel results
-        if "channel_results" in data and data["channel_results"]:
-            channel_info = data["channel_results"][0]
-            channel_name = channel_info.get("name", "YouTube Channel")
-            channel_id = channel_info.get("id")
+        if "channels" in data and data["channels"]:
+            channel_info = data["channels"][0]
+            channel_name = channel_info.get("title", "YouTube Channel")
+            channel_id = channel_info.get("channel_id")
+            
+            logging.info(f"Found channel: {channel_name}, id: {channel_id}")
+            
+            # If we have direct video results in the response, use them
+            if "videos" in data and data["videos"]:
+                logging.info(f"Found {len(data['videos'])} videos directly in search results")
+                
+                # Extract videos from the channel's videos
+                videos = []
+                for video in data["videos"]:
+                    # Only include videos from this specific channel
+                    if video.get("channel") == channel_name:
+                        videos.append(video)
+                
+                if len(videos) >= 6:
+                    logging.info(f"Returning {len(videos[:6])} videos from direct search results")
+                    return {
+                        "channel_name": channel_name,
+                        "videos": videos[:6]  # Ensure we return at most 6
+                    }
             
             # Get videos from this specific channel
             channel_response = requests.get(
