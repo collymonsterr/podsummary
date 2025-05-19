@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 class PodBriefAPITester:
-    def __init__(self, base_url="https://03994ffd-b1ec-4917-9c69-f797154b536c.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://2741a2ce-05d6-4231-a8fb-a5540c0f1367.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
