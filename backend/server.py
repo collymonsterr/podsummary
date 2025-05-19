@@ -619,11 +619,14 @@ async def get_channel_videos(request: dict):
                     }
             
             # Get videos from this specific channel
+            channel_query = f"channel:{channel_id}" if channel_id else f"channel:{channel_name}"
+            logging.info(f"Performing channel-specific search with query: {channel_query}")
+            
             channel_response = requests.get(
                 "https://www.searchapi.io/api/v1/search",
                 params={
                     "engine": "youtube",
-                    "channel_id": channel_id,
+                    "q": channel_query,
                     "api_key": searchapi_key,
                     "num": 6  # Request exactly 6 videos
                 }
@@ -631,17 +634,38 @@ async def get_channel_videos(request: dict):
             
             if channel_response.status_code == 200:
                 channel_data = channel_response.json()
-                logging.info(f"Channel-specific SearchAPI Response: Status=200, Data: {json.dumps(channel_data)[:500]}...")
-                videos = channel_data.get("video_results", [])
+                logging.info(f"Channel-specific SearchAPI Response: Status=200, Data keys: {list(channel_data.keys())}")
                 
-                if videos:
+                if "videos" in channel_data and channel_data["videos"]:
+                    videos = channel_data["videos"]
+                    logging.info(f"Found {len(videos)} videos from channel-specific search")
+                    
                     return {
                         "channel_name": channel_name,
                         "videos": videos[:6]  # Ensure we return at most 6
                     }
         
-        # If channel-specific search didn't yield results, use the video results from original search
-        videos = data.get("video_results", [])
+        # If we reach here, channel-specific search didn't yield results
+        # Use the video results from original search
+        if "videos" in data and data["videos"]:
+            videos = data["videos"]
+            logging.info(f"Using {len(videos)} videos from original search")
+            
+            # Filter by channel name if possible
+            filtered_videos = []
+            for video in videos:
+                video_channel = video.get("channel", "")
+                if channel_name in video_channel or video_channel in channel_name:
+                    filtered_videos.append(video)
+            
+            if filtered_videos:
+                videos = filtered_videos
+                logging.info(f"Filtered to {len(videos)} videos from the target channel")
+            else:
+                logging.info("Could not filter videos by channel, using all results")
+        else:
+            logging.info("No videos found in search results")
+            videos = []
         
         # If we have videos, try to extract channel name from first video
         channel_name = "YouTube Channel"
