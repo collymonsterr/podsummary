@@ -193,6 +193,9 @@ async def get_transcript(video_id):
 # Summarize text using OpenAI's API or a fallback method
 async def summarize_text(text):
     try:
+        if 'openai' not in globals():
+            raise ImportError("OpenAI module not available")
+            
         # If transcript is very long, truncate it to avoid excessive token usage
         max_chars = 16000  # Approximate char count that fits in context
         if len(text) > max_chars:
