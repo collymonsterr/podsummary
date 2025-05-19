@@ -602,6 +602,7 @@ async def get_channel_videos(request: dict):
             
             if channel_response.status_code == 200:
                 channel_data = channel_response.json()
+                logging.info(f"Channel-specific SearchAPI Response: Status=200, Data: {json.dumps(channel_data)[:500]}...")
                 videos = channel_data.get("video_results", [])
                 
                 if videos:
