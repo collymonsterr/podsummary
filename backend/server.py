@@ -574,11 +574,14 @@ async def get_channel_videos(request: dict):
             }
         )
         
+        logging.info(f"SearchAPI.io Response (First request): Status={response.status_code}")
+        
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, 
                                 detail=f"SearchAPI.io error: {response.text}")
         
         data = response.json()
+        logging.info(f"SearchAPI.io Data: {json.dumps(data)[:500]}...")
         
         # Check if we found channel results
         if "channel_results" in data and data["channel_results"]:
